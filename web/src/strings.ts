@@ -277,6 +277,11 @@ export const messages: Record<ErrorCode, Message> = {
 
 /** Messages that depend on which side you're on, or on a name or size. */
 export const messageText = {
+  tooManyCodes: {
+    what: "Too many codes were made from this network just now.",
+    why: "To keep HANDit free for everyone, each network can make 20 codes and 60 join attempts every 10 minutes.",
+    next: "Wait a few minutes, then try again.",
+  },
   offerTimeoutRecipient: "No response — nothing was received.",
   storageTooSmall: (needed: string, available: string) =>
     `Not enough browser storage: needs ${needed}, ${available} available.`,

@@ -582,6 +582,8 @@ function Failed({ state, actions }: { state: SessionState; actions: SessionActio
   const error = state.error ?? new HanditError("UNKNOWN_ERROR");
   const code = error.code;
   const recipientTimeout = code === "OFFER_TIMEOUT" && !state.sending;
+  // The Room refused because this network used up its per-IP allowance (close code 4429).
+  const rateLimited = code === "UNKNOWN_ERROR" && error.details.includes("4429");
   const finished = state.saved ?? [];
   const tryAgain = actions.restart ?? actions.retry;
   const action = (() => {
@@ -610,7 +612,15 @@ function Failed({ state, actions }: { state: SessionState; actions: SessionActio
     <div className="space-y-6">
       <ErrorView
         error={error}
-        what={recipientTimeout ? messageText.offerTimeoutRecipient : undefined}
+        what={
+          recipientTimeout
+            ? messageText.offerTimeoutRecipient
+            : rateLimited
+              ? messageText.tooManyCodes.what
+              : undefined
+        }
+        why={rateLimited ? messageText.tooManyCodes.why : undefined}
+        next={rateLimited ? messageText.tooManyCodes.next : undefined}
       >
         {action}
         <Button variant="secondary" onClick={() => navigate("/")}>
