@@ -6,5 +6,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   test: {
     include: ["test/**/*.test.ts"],
+    // Transfers of several MiB through the in-memory channel take a few seconds on slow CI machines.
+    testTimeout: 30_000,
   },
 });
