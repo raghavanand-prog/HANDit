@@ -1,0 +1,22 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "handit",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-19",
+  // One official address: handit.<subdomain>.workers.dev. No per-version preview URLs.
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": {
+    "directory": "../web/dist",
+    // Paths like /j load the app; page loads never run the Worker, so they cost nothing.
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/ws/*"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "ROOM", "class_name": "Room" }]
+  },
+  // The free plan only allows SQLite-backed Durable Objects.
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+  // No request logs: nothing records room IDs, links or frames.
+  "observability": { "enabled": false }
+}
