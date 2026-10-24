@@ -4,6 +4,7 @@ import { defaultDeviceName, thisDevice, uaLabel } from "../core/device";
 import type { LinkResult } from "../core/link";
 import { cleanUpLeftovers } from "../core/save";
 import { loadSettings, type Settings, saveSettings } from "../core/settings";
+import { clearSharedFiles } from "../core/share";
 import { missingFeatures } from "../core/support";
 import { strings } from "../strings";
 import { AppContext, type AppContextValue } from "./app-context";
@@ -72,6 +73,8 @@ export function App({ joinLink: openedWith }: { joinLink: LinkResult | null }) {
   useEffect(() => {
     // Received data from earlier visits is deleted (unless another open tab is using it).
     void cleanUpLeftovers();
+    // A share that was never opened doesn't linger (an open /send?shared=… takes its own first).
+    if (!location.search.includes("shared=")) void clearSharedFiles();
   }, []);
 
   const context: AppContextValue = useMemo(

@@ -10,3 +10,10 @@ const joinLink = location.pathname === "/j" ? takeLinkFromAddressBar(location, h
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing #root element");
 createRoot(root).render(<App joinLink={joinLink} />);
+
+// The installed app: a service worker keeps the page shell, so the app opens offline.
+if ("serviceWorker" in navigator && import.meta.env.PROD) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {
+    // Not available (private window, blocked): the site works the same without it.
+  });
+}
