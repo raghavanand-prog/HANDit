@@ -2,6 +2,36 @@
 
 Spike results, library choices and any change to an earlier decision, newest first.
 
+## 2026-10-24 — The Room and the per-IP limits
+
+**Per-IP limits use a second, tiny Durable Object, `Limiter`,** one per client address. It counts exactly what the protocol asks for: at most 20 new codes and 60 join attempts per 10 minutes, over a sliding window.
+- **What it stores:** only the times of recent allowed attempts. It deletes them 10 minutes after the last one, using an alarm. It never stores the address itself, and nothing is logged.
+- **How addresses are counted:** IPv4 addresses one by one. IPv6 addresses per /64, because one user usually controls a whole /64 and could otherwise rotate through it.
+- **Why not Cloudflare's built-in rate limiter:** it only counts over 10- or 60-second windows, approximately and separately in each Cloudflare location. Using it would have loosened the 10-minute limits.
+- **Cost:** about 2 extra Durable Object requests per transfer, well inside the free plan.
+- **Plan change:** this adds a second Durable Object class to the stack, which planned only `Room`.
+
+**Refusals use WebSocket close codes.** A browser can read a WebSocket's close code but not the HTTP status of a refused upgrade. So the Worker and the Room accept the connection, then close it straight away with one of these codes:
+
+| Code | Meaning                                          | What the page shows                   |
+| ---- | ------------------------------------------------ | ------------------------------------- |
+| 4404 | No owner, or the owner has left                  | `CODE_NOT_ACTIVE`                     |
+| 4409 | A guest already joined (or a second owner tried) | `CODE_ALREADY_USED`                   |
+| 4410 | The code's lifetime is over                      | `CODE_EXPIRED`                        |
+| 4429 | Per-IP limit, or more than 100 frames in a room  | `UNKNOWN_ERROR` (Details: the reason) |
+| 4413 | A frame over 32 KiB                              | `UNKNOWN_ERROR`                       |
+| 4400 | A binary frame                                   | `UNKNOWN_ERROR`                       |
+| 4408 | The room reached its 10-minute maximum life      | `UNKNOWN_ERROR`                       |
+| 1000 | The other side left                              | Depends on the stage                  |
+
+Requests that aren't WebSocket upgrades get HTTP 426, and malformed `role`/`ttl` queries get HTTP 400. Only HANDit's own page sends those, so a plain HTTP status is enough.
+
+**Either side leaving ends the Room.** The Room can't see the sealed `bye`. Instead, both browsers close their WebSocket after `bye`, and when one side closes, the Room closes the other and deletes everything. This covers "both sides sent bye" and "the owner left before a guest joined". It also tells a waiting side straight away that the other side is gone. A breach of the frame limits also ends the Room for both sides.
+
+**State that must survive the Room sleeping (the Hibernation API)** is kept in two places:
+- The code's expiry and whether a guest has joined are in Durable Object storage: 2 writes per code.
+- Each socket's frame count is in its WebSocket attachment, which costs no storage writes.
+
 ## 2026-10-24 — Link and sealed-message details
 
 The protocol fixes what the link and sealed frames contain but leaves a few byte-level details open. These are the choices, all in `web/src/core/link.ts` and `web/src/core/seal.ts`:

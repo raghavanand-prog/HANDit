@@ -15,6 +15,7 @@ test("app paths such as /j load the app", async ({ page }) => {
 });
 
 test("the Worker answers /ws/ paths and refuses bad room IDs", async ({ request }) => {
-  expect((await request.get("/ws/0123456789abcdef0123456789abcdef")).status()).toBe(501);
+  // A room path needs a WebSocket upgrade, which a plain request doesn't have.
+  expect((await request.get("/ws/0123456789abcdef0123456789abcdef")).status()).toBe(426);
   expect((await request.get("/ws/not-a-room")).status()).toBe(404);
 });
