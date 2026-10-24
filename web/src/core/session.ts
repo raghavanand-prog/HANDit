@@ -150,6 +150,14 @@ export class Session {
     this.fail(new HanditError("CANCELLED_BY_USER"));
   }
 
+  /**
+   * The page is going away (tab closed, navigated away): close the connection straight
+   * away so the other device learns it at once (PEER_LEFT) instead of after a timeout.
+   */
+  leave() {
+    this.closeConnection();
+  }
+
   /** Leaves the session and deletes any received data it still holds. */
   async dispose() {
     if (this.disposed) return;
