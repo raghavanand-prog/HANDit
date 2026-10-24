@@ -23,5 +23,5 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check # lint, type-check, build, unit and Worker tests
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium firefox webkit
       - run: npm run test:e2e

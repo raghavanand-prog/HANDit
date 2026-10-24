@@ -2,6 +2,24 @@
 
 Spike results, library choices and any change to an earlier decision, newest first.
 
+## 2026-10-24 — Webcam scanner (T-17): decoding approach
+
+**Question (the plan's spike):** which QR decoding approach works in each major browser, for laptop ↔ laptop without Copy link?
+
+**Choice:** the `qr` library's own camera helpers (`selfieCamera`, `QRCanvas`) and decoder, already a dependency for drawing codes. No second library is needed. The library uses the browser's native barcode detection where it exists and its own decoder otherwise, so there is one code path for HANDit to maintain.
+
+**Results** (the same measurements every run, in CI):
+
+| Engine   | Clean 6 px, non-integer 3.3 px, softened and noisy frames (10 different codes each) | Hard case: tiny 2.6 px modules, softened and noisy (20 codes) |
+| -------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Chromium | reads 10 of 10 in every case                                                        | reads 5 of 20                                                 |
+| Firefox  | reads 10 of 10 in every case                                                        | reads 8 of 20                                                 |
+| WebKit   | reads 10 of 10 in every case                                                        | reads 13 of 20                                                |
+
+The frames are drawn on a canvas the way a camera delivers them, in each engine. The hard case isn't required to pass; it shows the limit: a code that is tiny and blurry on the camera's image may not be read, so the scan screen asks people to hold the screen where the camera can see it clearly. A **real camera** was exercised only in Chromium, with a fake webcam device showing the other laptop's code: both journeys (J1 and J2) complete without Copy link. Real laptop webcams in Safari and Firefox have not been tried on hardware, so the scanner stays a convenience: Copy link remains on every code screen, and a camera that is missing, blocked or can't read the code is explained on the scan screen.
+
+**Scanner rules:** only a link from this site's own origin and path `/j` is accepted; anything else (a Wi-Fi code, another site's link) is ignored and scanning continues. The camera is stopped as soon as a code is read, and no video leaves the page. The Permissions-Policy allows the camera for the site only.
+
 ## 2026-10-24 — The Room and the per-IP limits
 
 **Per-IP limits use a second, tiny Durable Object, `Limiter`,** one per client address. It counts exactly what the protocol asks for: at most 20 new codes and 60 join attempts per 10 minutes, over a sliding window.

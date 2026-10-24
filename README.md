@@ -19,7 +19,7 @@ Needs Node.js 26.
 npm install
 npm run dev                     # the site at http://localhost:5173
 npm run check                   # lint, type-check, unit and Worker tests
-npx playwright install chromium # once, for the end-to-end tests
+npx playwright install chromium firefox webkit # once, for the end-to-end tests
 npm run test:e2e                # end-to-end tests in a real browser
 ```
 

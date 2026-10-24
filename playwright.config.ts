@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { FAKE_CAMERA, showCode } from "./e2e/scanner/camera";
 
 // Set BASE_URL to test the live site (and its Room) instead of a local copy.
 const liveUrl = process.env.BASE_URL;
@@ -6,6 +7,13 @@ const siteUrl = liveUrl ?? "http://localhost:8787";
 const reuse = !process.env.CI;
 // Plain IP addresses instead of mDNS names, so two browsers on one machine can always connect.
 const webrtcArgs = ["--disable-features=WebRtcHideLocalIpsWithMdns"];
+showCode(null); // the fake webcam starts out seeing an empty screen
+const cameraArgs = [
+  ...webrtcArgs,
+  "--use-fake-device-for-media-stream",
+  "--use-fake-ui-for-media-stream",
+  `--use-file-for-fake-video-capture=${FAKE_CAMERA}`,
+];
 
 export default defineConfig({
   forbidOnly: !!process.env.CI,
@@ -14,9 +22,31 @@ export default defineConfig({
   timeout: 60_000,
   projects: [
     {
+      // The QR decoder in each major browser engine (spike for the in-page scanner).
+      name: "engines-chromium",
+      testDir: "e2e/engines",
+      use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:5173" },
+    },
+    {
+      name: "engines-firefox",
+      testDir: "e2e/engines",
+      use: { ...devices["Desktop Firefox"], baseURL: "http://localhost:5173" },
+    },
+    {
+      name: "engines-webkit",
+      testDir: "e2e/engines",
+      use: { ...devices["Desktop Safari"], baseURL: "http://localhost:5173" },
+    },
+    {
       name: "site",
       testDir: "e2e/site",
       use: { ...devices["Desktop Chrome"], baseURL: siteUrl, launchOptions: { args: webrtcArgs } },
+    },
+    {
+      // The in-page scanner, with a fake webcam that shows a QR code of our choosing.
+      name: "scanner",
+      testDir: "e2e/scanner",
+      use: { ...devices["Desktop Chrome"], baseURL: siteUrl, launchOptions: { args: cameraArgs } },
     },
     {
       // Browser-level tests of web/src/core, loaded from the Vite dev server.
