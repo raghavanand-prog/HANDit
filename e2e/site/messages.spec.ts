@@ -152,3 +152,29 @@ test("P2P_FAILED: no direct connection within 20 seconds", async ({ browser }) =
   await phone.locator("summary", { hasText: "Details" }).click();
   await expect(phone.getByText(/Candidates found — this device: none/)).toBeVisible();
 });
+
+test("a network that used up its allowance is told to wait, in plain words", async ({ page }) => {
+  await page.addInitScript(() => {
+    class LimitedSocket extends EventTarget {
+      readyState = 0;
+      constructor() {
+        super();
+        setTimeout(() => {
+          this.readyState = 1;
+          this.dispatchEvent(new Event("open"));
+          this.readyState = 3;
+          this.dispatchEvent(
+            Object.assign(new Event("close"), { code: 4429, reason: "Too many attempts" }),
+          );
+        }, 20);
+      }
+      send() {}
+      close() {}
+    }
+    // biome-ignore lint/suspicious/noExplicitAny: replacing the browser's WebSocket for the test
+    (window as any).WebSocket = LimitedSocket;
+  });
+  await page.goto("/receive");
+  await expect(heading(page, "Too many codes were made from this network just now.")).toBeVisible();
+  await expect(page.getByText("Wait a few minutes, then try again.")).toBeVisible();
+});
