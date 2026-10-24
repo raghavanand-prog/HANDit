@@ -4,8 +4,11 @@ import { Receiver, Sender, type TransferState } from "../src/core/transfer";
 import { MemoryChannel, MemorySink, MemorySource } from "./channel";
 
 const MiB = 1024 * 1024;
-const bytes = (n: number, seed = 1) =>
-  Uint8Array.from({ length: n }, (_, i) => (i * 31 + seed) % 256);
+const bytes = (n: number, seed = 1) => {
+  const data = new Uint8Array(n);
+  for (let i = 0; i < n; i++) data[i] = (i * 31 + seed) & 0xff;
+  return data;
+};
 
 function setUp(sizes: number[], options: { unreadable?: number[]; delayMs?: number } = {}) {
   const files: Record<number, Uint8Array> = {};
