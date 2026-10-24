@@ -1,18 +1,44 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Set BASE_URL to test the live site instead of a local copy.
+// Set BASE_URL to test the live site (and its Room) instead of a local copy.
 const liveUrl = process.env.BASE_URL;
+const siteUrl = liveUrl ?? "http://localhost:8787";
+const reuse = !process.env.CI;
+// Plain IP addresses instead of mDNS names, so two browsers on one machine can always connect.
+const webrtcArgs = ["--disable-features=WebRtcHideLocalIpsWithMdns"];
 
 export default defineConfig({
-  testDir: "e2e",
   forbidOnly: !!process.env.CI,
-  use: { baseURL: liveUrl ?? "http://localhost:8787" },
-  projects: [{ name: "chromium", use: devices["Desktop Chrome"] }],
-  webServer: liveUrl
-    ? undefined
-    : {
-        command: "npm run preview",
-        url: "http://localhost:8787",
-        reuseExistingServer: !process.env.CI,
+  timeout: 60_000,
+  projects: [
+    {
+      name: "site",
+      testDir: "e2e/site",
+      use: { ...devices["Desktop Chrome"], baseURL: siteUrl, launchOptions: { args: webrtcArgs } },
+    },
+    {
+      // Browser-level tests of web/src/core, loaded from the Vite dev server.
+      name: "core",
+      testDir: "e2e/core",
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: "http://localhost:5173",
+        launchOptions: { args: webrtcArgs },
       },
+    },
+  ],
+  webServer: [
+    ...(liveUrl
+      ? []
+      : [{ command: "npm run preview", url: "http://localhost:8787", reuseExistingServer: reuse }]),
+    {
+      command: "npx vite --port 5173 --strictPort",
+      cwd: "web",
+      url: "http://localhost:5173",
+      reuseExistingServer: reuse,
+    },
+  ],
 });
+
+/** Where the core tests find the Room. */
+export const roomOrigin = siteUrl;
