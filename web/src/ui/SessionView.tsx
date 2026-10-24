@@ -22,7 +22,18 @@ import { CodeCard } from "./CodeCard";
 import { ErrorView } from "./ErrorView";
 import { FilePicker } from "./FilePicker";
 import { formatBytes, formatDuration, formatKind } from "./format";
-import { Button, Notice, PathLabel, PeerName, Spinner, Title } from "./parts";
+import {
+  Button,
+  Card,
+  CheckMark,
+  Notice,
+  PathLabel,
+  PeerName,
+  ProgressBar,
+  Spinner,
+  StatusPill,
+  Title,
+} from "./parts";
 import { navigate, setLeaveGuard } from "./router";
 
 export interface SessionActions {
@@ -77,11 +88,53 @@ export function SessionView({ session, actions }: { session: Session; actions: S
     };
   }, [busy]);
 
+  const status = statusFor(state);
   return (
     <div ref={heading} data-stage={state.stage}>
-      <Stage state={state} session={session} actions={actions} />
+      {status && (
+        <div className="mb-4">
+          <StatusPill tone={status.tone}>{status.label}</StatusPill>
+        </div>
+      )}
+      <div key={state.stage} className="enter">
+        <Stage state={state} session={session} actions={actions} />
+      </div>
     </div>
   );
+}
+
+/** One word for where the transfer stands, for the pill at the top of each screen. */
+function statusFor(
+  state: SessionState,
+): { tone: "accent" | "good" | "warn" | "bad"; label: string } | null {
+  const text = strings.status;
+  switch (state.stage) {
+    case "preparing":
+      return { tone: "accent", label: text.preparing };
+    case "expired":
+      return { tone: "warn", label: text.expired };
+    case "joining":
+    case "connecting":
+      return { tone: "accent", label: text.connecting };
+    case "choosing":
+      return { tone: "accent", label: state.sending ? text.waitingForYou : text.waitingForThem };
+    case "confirming":
+    case "review":
+      return { tone: "warn", label: text.waitingForYou };
+    case "awaiting":
+      return { tone: "accent", label: text.waitingForThem };
+    case "transferring":
+      return { tone: "accent", label: text.transferring };
+    case "complete": {
+      const t = state.transfer;
+      const allOk = t && Object.values(t.outcomes).filter((o) => o.ok).length === t.totalFiles;
+      return allOk ? { tone: "good", label: text.done } : { tone: "warn", label: text.partial };
+    }
+    case "failed":
+      return { tone: "bad", label: text.failed };
+    default:
+      return null;
+  }
 }
 
 function Stage({
@@ -354,7 +407,7 @@ function Review({ state, session }: { state: SessionState; session: Session }) {
           {strings.review.decline}
         </Button>
       </div>
-      <p className="text-xs text-muted">{strings.review.countdown(120)}</p>
+      <p className="text-sm text-muted">{strings.review.countdown(120)}</p>
     </div>
   );
 }
@@ -371,29 +424,65 @@ function Progress({ state, session }: { state: SessionState; session: Session })
   return (
     <div className="space-y-5">
       <Title>{done ? strings.progress.verifying : line}</Title>
-      <progress
-        className="h-3 w-full overflow-hidden rounded-full [&::-moz-progress-bar]:bg-ink [&::-webkit-progress-bar]:bg-line [&::-webkit-progress-value]:bg-ink"
-        max={Math.max(t.totalBytes, 1)}
-        value={Math.min(t.bytes, t.totalBytes)}
-        aria-label={line}
-      />
-      <p className="tabular-nums" role="status">
-        {strings.progress.bytes(
-          formatBytes(Math.min(t.bytes, t.totalBytes)),
-          formatBytes(t.totalBytes),
-        )}
-        {left !== undefined && !done ? ` · ${strings.progress.left(formatDuration(left))}` : ""}
-      </p>
-      {state.peer && (
-        <p className="text-sm">
-          <PeerName peer={state.peer} />
+      <Route state={state} />
+      <div className="space-y-2">
+        <ProgressBar value={t.bytes} max={t.totalBytes} label={line} active={!done} />
+        <p className="flex flex-wrap justify-between gap-x-4 text-sm tabular-nums" role="status">
+          <span>
+            {strings.progress.bytes(
+              formatBytes(Math.min(t.bytes, t.totalBytes)),
+              formatBytes(t.totalBytes),
+            )}
+          </span>
+          <span className="text-muted">
+            {left !== undefined && !done ? strings.progress.left(formatDuration(left)) : ""}
+          </span>
         </p>
-      )}
+      </div>
       <PathLabel />
       <Button variant="danger" onClick={() => session.cancel()}>
         {strings.cancel}
       </Button>
     </div>
+  );
+}
+
+/** Source, destination and contents of the transfer, always in the same place. */
+function Route({ state }: { state: SessionState }) {
+  const items = state.transfer?.items ?? [];
+  const peer = state.peer;
+  const mine = <span className="font-semibold">{strings.route.thisDevice}</span>;
+  const theirs = peer ? (
+    <span>
+      <span className="font-semibold">
+        <bdi>{peer.name}</bdi>
+      </span>
+      <span className="block text-sm text-muted">{peer.ua}</span>
+      <span className="block text-sm text-muted">{strings.nameNotVerified}</span>
+    </span>
+  ) : null;
+  const endpoint = (label: string, who: React.ReactNode) => (
+    <div className="min-w-0 flex-1">
+      <p className="text-sm text-muted">{label}</p>
+      {who}
+    </div>
+  );
+  return (
+    <Card className="space-y-4">
+      <div className="flex items-center gap-3">
+        {endpoint(strings.route.from, state.sending ? mine : theirs)}
+        <span aria-hidden="true" className="text-2xl text-muted">
+          →
+        </span>
+        {endpoint(strings.route.to, state.sending ? theirs : mine)}
+      </div>
+      {items.length > 0 && (
+        <p className="border-t border-line pt-3 text-sm">
+          <span className="text-muted">{strings.route.contents}: </span>
+          {mediaSummary(items).join(" · ")} · {formatBytes(state.transfer?.totalBytes ?? 0)}
+        </p>
+      )}
+    </Card>
   );
 }
 
@@ -409,6 +498,15 @@ function Badge({ allOk, ok, total }: { allOk: boolean; ok: number; total: number
   );
 }
 
+function Finished({ state }: { state: SessionState }) {
+  if (!state.finishedAt) return null;
+  const time = new Date(state.finishedAt).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return <p className="text-sm text-muted">{strings.route.finishedAt(time)}</p>;
+}
+
 function Sent({ state }: { state: SessionState }) {
   const t = state.transfer;
   if (!t) return null;
@@ -416,8 +514,13 @@ function Sent({ state }: { state: SessionState }) {
   const allOk = ok === t.totalFiles;
   return (
     <div className="space-y-6">
-      <Title>{strings.complete.sent}</Title>
+      <div className="flex items-center gap-4">
+        {allOk && <CheckMark />}
+        <Title>{strings.complete.sent}</Title>
+      </div>
       <Badge allOk={allOk} ok={ok} total={t.totalFiles} />
+      <Route state={state} />
+      <Finished state={state} />
       {allOk && <p className="text-muted">{notices.QUALITY_IDENTICAL}</p>}
       <FileResults items={t.items} outcomes={t.outcomes} />
       <Button onClick={() => navigate("/")}>{strings.done}</Button>
@@ -435,12 +538,17 @@ function Received({ state }: { state: SessionState }) {
   const media = mediaSummary(t.items);
   return (
     <div className="space-y-6">
-      <Title>
-        {media.length
-          ? strings.complete.receivedMedia(media)
-          : strings.complete.received(t.items.length)}
-      </Title>
+      <div className="flex items-center gap-4">
+        {allOk && <CheckMark />}
+        <Title>
+          {media.length
+            ? strings.complete.receivedMedia(media)
+            : strings.complete.received(t.items.length)}
+        </Title>
+      </div>
       <Badge allOk={allOk} ok={ok} total={t.totalFiles} />
+      <Route state={state} />
+      <Finished state={state} />
       {allOk && <p className="text-muted">{notices.QUALITY_IDENTICAL}</p>}
       {heic && <Notice>{notices.INFO_HEIC_ON_WINDOWS}</Notice>}
       <SaveOptions saved={state.saved ?? []} folders={state.folders ?? []} items={t.items} />

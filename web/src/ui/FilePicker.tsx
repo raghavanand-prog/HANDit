@@ -115,7 +115,7 @@ export function FilePicker({
                   type="button"
                   aria-label={strings.send.remove(p.path)}
                   onClick={() => onChange(picked.filter((_, i) => i !== index))}
-                  className="shrink-0 rounded-lg px-2 py-1 text-muted hover:text-ink"
+                  className="-my-1 -mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted hover:text-ink"
                 >
                   ✕
                 </button>

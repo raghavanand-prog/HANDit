@@ -52,6 +52,8 @@ export interface SessionState {
   /** Recipient: verified files, ready to save (after a failure, the ones that finished). */
   saved?: SavedFile[];
   folders?: OfferItem[];
+  /** When the transfer finished, in milliseconds since 1970. */
+  finishedAt?: number;
   error?: HanditError;
 }
 
@@ -336,8 +338,9 @@ export class Session {
 
   private finish(final: TransferState) {
     this.clearTimers();
-    if (final.phase === "complete") this.set({ stage: "complete", transfer: final });
-    else this.fail(final.error ?? new HanditError("UNKNOWN_ERROR"), final);
+    if (final.phase === "complete") {
+      this.set({ stage: "complete", transfer: final, finishedAt: Date.now() });
+    } else this.fail(final.error ?? new HanditError("UNKNOWN_ERROR"), final);
   }
 
   private fail(error: unknown, transfer?: TransferState) {

@@ -10,7 +10,7 @@ import { strings } from "../strings";
 import { useApp } from "./app-context";
 import { ErrorView } from "./ErrorView";
 import { FilePicker } from "./FilePicker";
-import { Button, Title } from "./parts";
+import { Button, Switch, Title } from "./parts";
 import { Link, navigate } from "./router";
 import { SessionView } from "./SessionView";
 
@@ -63,14 +63,14 @@ export function Home() {
       <nav aria-label={`${strings.home.send} / ${strings.home.receive}`} className="grid gap-4">
         <Link
           href="/send"
-          className="group block rounded-3xl bg-ink p-6 text-paper no-underline transition-opacity hover:opacity-95"
+          className="group block rounded-3xl bg-accent p-6 text-accent-ink no-underline hover:opacity-95"
         >
           <span className="block font-display text-3xl font-bold">{strings.home.send}</span>
           <span className="mt-1 block opacity-80">{strings.home.sendHint}</span>
         </Link>
         <Link
           href="/receive"
-          className="block rounded-3xl border-2 border-ink p-6 text-ink no-underline hover:bg-surface"
+          className="block rounded-3xl border-2 border-ink p-6 text-ink no-underline hover:bg-accent-soft"
         >
           <span className="block font-display text-3xl font-bold">{strings.home.receive}</span>
           <span className="mt-1 block text-muted">{strings.home.receiveHint}</span>
@@ -206,18 +206,12 @@ export function SettingsPage() {
           ))}
         </div>
       </fieldset>
-      <label className="flex items-start gap-3">
-        <input
-          type="checkbox"
-          checked={settings.confirmReceiver}
-          onChange={(e) => update({ confirmReceiver: e.target.checked })}
-          className="mt-1 h-5 w-5 accent-[var(--ink)]"
-        />
-        <span>
-          <span className="block font-semibold">{strings.settings.confirm}</span>
-          <span className="block text-sm text-muted">{strings.settings.confirmHint}</span>
-        </span>
-      </label>
+      <Switch
+        checked={settings.confirmReceiver}
+        onChange={(confirmReceiver) => update({ confirmReceiver })}
+        label={strings.settings.confirm}
+        hint={strings.settings.confirmHint}
+      />
       <p role="status" className="text-sm text-verified">
         {saved ? strings.settings.saved : ""}
       </p>
