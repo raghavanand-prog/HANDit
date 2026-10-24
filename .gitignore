@@ -1,0 +1,20 @@
+# Private working notes — never commit
+CLAUDE.md
+docs/FINAL_PRODUCT_PLAN.md
+.claude/
+
+# Dependencies and build output
+node_modules/
+dist/
+.wrangler/
+
+# Test output
+test-results/
+playwright-report/
+
+# Local environment
+.env*
+.dev.vars*
+
+# OS
+.DS_Store
