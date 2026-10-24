@@ -7,12 +7,22 @@ export const WINDOW_MS = 10 * 60 * 1000;
 export const LIMITS = { room: 20, join: 60 } as const;
 export type LimitKind = keyof typeof LIMITS;
 
+/**
+ * The limits in force. LIMIT_MULTIPLIER exists for the automated browser tests, which create far
+ * more codes from one machine than a person would: it is set only on the local test server's
+ * command line, never in wrangler.jsonc, so production always uses the base limits.
+ */
+export function limitsFor(env: { LIMIT_MULTIPLIER?: string }): Record<LimitKind, number> {
+  const multiplier = Math.min(1000, Math.max(1, Math.floor(Number(env.LIMIT_MULTIPLIER) || 1)));
+  return { room: LIMITS.room * multiplier, join: LIMITS.join * multiplier };
+}
+
 export class Limiter extends DurableObject<Env> {
   /** Records an attempt if it's within the limit, and says whether it was. */
   async allow(kind: LimitKind): Promise<boolean> {
     const now = Date.now();
     const recent = this.recent(kind, now);
-    if (recent.length >= LIMITS[kind]) return false;
+    if (recent.length >= limitsFor(this.env as { LIMIT_MULTIPLIER?: string })[kind]) return false;
     this.ctx.storage.kv.put(kind, [...recent, now]);
     if ((await this.ctx.storage.getAlarm()) === null) {
       await this.ctx.storage.setAlarm(now + WINDOW_MS);

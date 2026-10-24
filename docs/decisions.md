@@ -2,6 +2,14 @@
 
 Spike results, library choices and any change to an earlier decision, newest first.
 
+## 2026-10-24 — Confirm who receives (T-19)
+
+The sender taps **Allow** before the file list is sent. It was built with the screens (T-09) rather than in week 3, because the flow is simpler to build once than to retrofit, and it is **on by default**: it closes the residual of threat T4 (someone else opens a send code first) for everyone, not only for people who find the setting. The sender can switch it off in Settings.
+- The joining device's name is shown with "name not verified", and nothing is offered to it while the sender decides.
+- **Don't allow** tells the other device the transfer was cancelled; it never sees the file list. The sender can then show a new code for the person they meant.
+- It only applies when the sender owns the code (J1 and Copy link). When the receiving device shows the code (J2), the scanning device is the sender and chooses its own files, so there is nobody to confirm.
+- Where the plan's journey text (§3.2 step 4) has the sender see "Pixel 8 joined · Waiting for them to accept…", that screen now comes after Allow.
+
 ## 2026-10-24 — Installable app and sharing from the Android gallery (T-18)
 
 **Installable:** a web app manifest (name, icons including a maskable one, standalone display, theme colours) and a service worker. Chromium's own installability check reports no errors, so Chrome on Android and desktop offer to install it. Safari on iPhone can add it to the Home Screen (the manifest and an Apple touch icon are provided).

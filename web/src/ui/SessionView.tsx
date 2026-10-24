@@ -592,6 +592,11 @@ function Failed({ state, actions }: { state: SessionState; actions: SessionActio
       case "P2P_FAILED":
       case "UNKNOWN_ERROR":
         return tryAgain ? <Button onClick={tryAgain}>{strings.actions.tryAgain}</Button> : null;
+      case "CANCELLED_BY_USER":
+        // Refused or cancelled: the device that owns the code can show a fresh one.
+        return state.role === "owner" && actions.restart ? (
+          <Button onClick={actions.restart}>{strings.actions.newCode}</Button>
+        ) : null;
       case "CONNECTION_LOST":
       case "PEER_LEFT":
         return state.sending && actions.restart ? (

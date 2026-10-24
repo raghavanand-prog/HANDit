@@ -1,7 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 import { FAKE_CAMERA, showCode } from "./e2e/scanner/camera";
 
-// Set BASE_URL to test the live site (and its Room) instead of a local copy.
+// Set BASE_URL to test the live site instead of a local copy (npm run test:e2e:live). Only the
+// site and scanner suites run against it: the core suite loads its pages from the dev server's
+// origin, which the live Room refuses by design (the origin check).
 const liveUrl = process.env.BASE_URL;
 const siteUrl = liveUrl ?? "http://localhost:8787";
 const reuse = !process.env.CI;
