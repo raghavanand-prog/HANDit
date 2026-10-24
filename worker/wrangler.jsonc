@@ -12,11 +12,18 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/ws/*"]
   },
+  // Room: one per code. Limiter: one per client IP, for the per-IP limits.
   "durable_objects": {
-    "bindings": [{ "name": "ROOM", "class_name": "Room" }]
+    "bindings": [
+      { "name": "ROOM", "class_name": "Room" },
+      { "name": "LIMITER", "class_name": "Limiter" }
+    ]
   },
   // The free plan only allows SQLite-backed Durable Objects.
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Room"] },
+    { "tag": "v2", "new_sqlite_classes": ["Limiter"] }
+  ],
   // No request logs: nothing records room IDs, links or frames.
   "observability": { "enabled": false }
 }

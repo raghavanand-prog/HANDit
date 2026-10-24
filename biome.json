@@ -13,5 +13,11 @@
     "rules": {
       "preset": "recommended"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["web/src/**", "worker/src/**"],
+      "linter": { "rules": { "suspicious": { "noConsole": "error" } } }
+    }
+  ]
 }
