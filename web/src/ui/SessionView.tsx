@@ -54,6 +54,13 @@ export function SessionView({ session, actions }: { session: Session; actions: S
     heading.current?.querySelector<HTMLElement>("h1")?.focus();
   }, [state.stage]);
 
+  // When the page goes away, tell the other device now rather than let it time out.
+  useEffect(() => {
+    const leave = () => session.leave();
+    window.addEventListener("pagehide", leave);
+    return () => window.removeEventListener("pagehide", leave);
+  }, [session]);
+
   // Closing the tab or leaving the page mid-transfer asks first.
   const busy = BUSY.includes(state.stage);
   useEffect(() => {

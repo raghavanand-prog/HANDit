@@ -9,6 +9,8 @@ const webrtcArgs = ["--disable-features=WebRtcHideLocalIpsWithMdns"];
 
 export default defineConfig({
   forbidOnly: !!process.env.CI,
+  // On CI's shared machines a 1 GiB transfer starves other WebRTC tests, so run one at a time.
+  workers: process.env.CI ? 1 : undefined,
   timeout: 60_000,
   projects: [
     {
