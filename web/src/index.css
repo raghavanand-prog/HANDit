@@ -1,1 +1,95 @@
 @import "tailwindcss";
+
+/* HANDit's palette: ink on cool paper, with a marigold hand-off tag for the code. */
+:root {
+  --ink: #172033;
+  --paper: #f4f6f9;
+  --surface: #ffffff;
+  --line: #dfe3ea;
+  --muted: #5b6476;
+  --tag: #ffd447;
+  --tag-ink: #3a2c00;
+  --verified: #127a4e;
+  --verified-soft: #e3f4ec;
+  --warn: #9a4a06;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --focus: #1d4ed8;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e8ecf4;
+    --paper: #0f1420;
+    --surface: #182031;
+    --line: #2b3548;
+    --muted: #9aa4b8;
+    --tag: #ffd447;
+    --tag-ink: #3a2c00;
+    --verified: #4ccf91;
+    --verified-soft: #12301f;
+    --warn: #f5b04a;
+    --danger: #ff8a7a;
+    --danger-soft: #3a1714;
+    --focus: #8fb2ff;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-muted: var(--muted);
+  --color-tag: var(--tag);
+  --color-tag-ink: var(--tag-ink);
+  --color-verified: var(--verified);
+  --color-verified-soft: var(--verified-soft);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-focus: var(--focus);
+  --font-display:
+    ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Segoe UI Variable Display",
+    system-ui, sans-serif;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+}
+
+@layer base {
+  html {
+    background: var(--paper);
+    color: var(--ink);
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    font-family: var(--font-sans);
+    line-height: 1.5;
+  }
+  :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+}
+
+/* The one moment of motion: the "Identical ✓" stamp lands. */
+@keyframes stamp {
+  from {
+    transform: scale(1.12) rotate(-3deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(-1deg);
+    opacity: 1;
+  }
+}
+.stamp {
+  animation: stamp 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .stamp {
+    animation: none;
+  }
+}

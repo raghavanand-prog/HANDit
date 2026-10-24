@@ -22,7 +22,8 @@
     "check": "npm run lint && npm run typecheck && npm run build && npm test",
     "preview": "npm run build && npm run dev -w worker",
     "test:e2e": "playwright test",
-    "deploy": "npm run build && npm run deploy -w worker"
+    "deploy": "npm run build && npm run deploy -w worker",
+    "e2e:server": "node -e \"require('node:fs').rmSync('.wrangler/e2e',{recursive:true,force:true})\" && npm run build && npm run dev -w worker -- --persist-to ../.wrangler/e2e"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.2",
