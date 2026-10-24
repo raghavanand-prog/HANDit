@@ -60,6 +60,21 @@ const footerLinks: [string, string][] = [
   ["/about", strings.nav.about],
 ];
 
+/** Whether the browser thinks it has a network connection. */
+function useOnline() {
+  const [online, setOnline] = useState(() => navigator.onLine);
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
+  return online;
+}
+
 export function App({ joinLink: openedWith }: { joinLink: LinkResult | null }) {
   const path = usePath();
   // A code opened from a link (read at start-up) or scanned with the in-page camera.
@@ -69,6 +84,7 @@ export function App({ joinLink: openedWith }: { joinLink: LinkResult | null }) {
     loadSettings(defaultDeviceName(device)),
   );
   const unsupported = useMemo(missingFeatures, []);
+  const online = useOnline();
 
   useEffect(() => {
     // Received data from earlier visits is deleted (unless another open tab is using it).
@@ -99,19 +115,30 @@ export function App({ joinLink: openedWith }: { joinLink: LinkResult | null }) {
       >
         {strings.skipToContent}
       </a>
+      {!online && (
+        <p
+          role="status"
+          className="enter bg-danger-soft px-4 py-2 text-center text-sm font-medium text-danger"
+        >
+          {strings.offline}
+        </p>
+      )}
       <div className="flex min-h-dvh flex-col">
         <header className="mx-auto flex w-full max-w-xl items-center justify-between px-4 pt-5">
           {path === "/" ? (
             <span />
           ) : (
-            <Link href="/" className="font-display text-xl font-extrabold tracking-tight">
+            <Link
+              href="/"
+              className="-ml-2 inline-flex min-h-11 min-w-11 items-center px-2 font-display text-xl font-extrabold tracking-tight"
+            >
               HAND<span className="rounded-md bg-tag px-1 text-tag-ink">it</span>
             </Link>
           )}
           <Link
             href="/settings"
             aria-label={strings.nav.settings}
-            className="rounded-xl p-2 text-muted hover:text-ink"
+            className="-mr-2 inline-flex h-11 w-11 items-center justify-center rounded-xl text-muted hover:text-ink"
           >
             <svg
               aria-hidden="true"

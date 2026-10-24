@@ -123,6 +123,29 @@ export const strings = {
     countdown: (s: number) => `Decide within ${s} s, or the files are declined.`,
   },
 
+  status: {
+    preparing: "Getting ready",
+    connecting: "Connecting",
+    waitingForYou: "Waiting for you",
+    waitingForThem: "Waiting for them",
+    transferring: "Transferring",
+    done: "Done",
+    partial: "Finished with problems",
+    failed: "Stopped",
+    expired: "Code expired",
+  },
+
+  offline:
+    "You're offline. HANDit needs the internet to start a transfer; files already received are kept.",
+
+  route: {
+    from: "From",
+    to: "To",
+    thisDevice: "This device",
+    contents: "Contents",
+    finishedAt: (time: string) => `Finished at ${time}`,
+  },
+
   progress: {
     sending: (file: number, files: number) => `Sending ${file} of ${files}`,
     receiving: (file: number, files: number) => `Receiving ${file} of ${files}`,

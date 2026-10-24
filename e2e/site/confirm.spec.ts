@@ -68,9 +68,10 @@ test("the sender can switch it off in Settings, and it is on by default", async 
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   const sender = await context.newPage();
   await sender.goto("/settings");
-  const toggle = sender.getByRole("checkbox", { name: /Confirm who receives/ });
-  await expect(toggle).toBeChecked(); // on by default
-  await toggle.uncheck();
+  const toggle = sender.getByRole("switch", { name: /Confirm who receives/ });
+  await expect(toggle).toHaveAttribute("aria-checked", "true"); // on by default
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-checked", "false");
 
   const friend = await (await browser.newContext()).newPage();
   await friend.goto(await showSendCode(sender));

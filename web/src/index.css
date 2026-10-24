@@ -14,7 +14,10 @@
   --warn: #9a4a06;
   --danger: #b42318;
   --danger-soft: #fdecea;
-  --focus: #1d4ed8;
+  --accent: #2a4fd6;
+  --accent-ink: #ffffff;
+  --accent-soft: #e8edff;
+  --focus: #2a4fd6;
   color-scheme: light;
 }
 
@@ -32,7 +35,10 @@
     --warn: #f5b04a;
     --danger: #ff8a7a;
     --danger-soft: #3a1714;
-    --focus: #8fb2ff;
+    --accent: #8ea8ff;
+    --accent-ink: #0b1020;
+    --accent-soft: #1b2650;
+    --focus: #8ea8ff;
     color-scheme: dark;
   }
 }
@@ -51,6 +57,9 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-focus: var(--focus);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
   --font-display:
     ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Segoe UI Variable Display",
     system-ui, sans-serif;
@@ -91,5 +100,79 @@
 @media (prefers-reduced-motion: reduce) {
   .stamp {
     animation: none;
+  }
+}
+
+/* Short, purposeful motion: a screen eases in; an active transfer shimmers; success draws a check. */
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.enter {
+  animation: enter 180ms ease-out both;
+}
+
+@keyframes sheen {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 28px 0;
+  }
+}
+.progress-sheen {
+  background-image: linear-gradient(
+    115deg,
+    transparent 0 35%,
+    rgb(255 255 255 / 0.28) 35% 65%,
+    transparent 65% 100%
+  );
+  background-size: 28px 100%;
+  animation: sheen 900ms linear infinite;
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.check-draw {
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+  animation: draw 380ms 120ms ease-out forwards;
+}
+
+button:not(:disabled):active {
+  transform: scale(0.98);
+}
+button,
+a {
+  transition-property: color, background-color, border-color, transform;
+  transition-duration: 120ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter,
+  .progress-sheen {
+    animation: none;
+  }
+  .check-draw {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  button:not(:disabled):active {
+    transform: none;
+  }
+  button,
+  a,
+  [role="progressbar"] > div,
+  [role="switch"] > span {
+    transition: none;
   }
 }
