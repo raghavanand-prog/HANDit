@@ -1,0 +1,52 @@
+name: Bug
+description: Something didn't work, or looked wrong.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing HANDit. Issues on GitHub are public: please don't attach personal files or share a live code.
+  - type: input
+    id: devices
+    attributes:
+      label: Devices
+      description: The two devices, and which one sent. For example, "iPhone 15 sending to a Windows laptop".
+    validations:
+      required: true
+  - type: input
+    id: browsers
+    attributes:
+      label: Browsers and versions
+      description: For example, "Safari on iOS 26, Edge 141".
+    validations:
+      required: true
+  - type: dropdown
+    id: network
+    attributes:
+      label: Network
+      options:
+        - Both on the same Wi-Fi
+        - One on the other's phone hotspot
+        - Home Wi-Fi and mobile data
+        - A VPN on one device
+        - A school, campus or office network
+        - Other (describe below)
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: input
+    id: code
+    attributes:
+      label: Message code
+      description: If the page showed an error, the code from Details, such as P2P_FAILED.
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Paste the text from the Details section of the error screen, if there was one.

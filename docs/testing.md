@@ -54,6 +54,34 @@ Run by CI on every pull request. Results of the most recent run:
 | Worker tests (Room, per-IP limits, routing)                                                                   | 40 pass  |
 | Browser tests (connection, 1 GiB transfer, ZIP saving, journeys J1, J2 and J6, message codes)                 | all pass |
 
+### Size and speed cases, automated, one laptop (2026-10-24)
+
+Run with `npm run bench` (not part of CI: they move gigabytes). Two browser profiles on one Mac, through the real Room; every file's root was compared with one computed independently in Node.
+
+| ID  | Case                                                | Result                                                                                                                  |
+| --- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| OQ8 | 1,000 photos of 5 MiB (5,000 MiB), laptop to laptop | **Pass**: all 1,000 identical; 113.5 s, 44.1 MiB/s; longest gap between frames 33 ms sending, 17 ms receiving           |
+| E3  | 10,000 small files (one empty)                      | **Pass**: all 10,000 verified in 12.9 s; longest gap between frames 450 ms (sender, building the list), 17 ms receiving |
+| E4  | 10,001 items                                        | **Pass**: the Send screen shows `LIMIT_EXCEEDED` and **Show code** is disabled                                          |
+| E1  | 0-byte file                                         | **Pass**: in the ZIP test and in E3, transferred and verified                                                           |
+| E5  | Hindi, Kannada and emoji names, NFC/NFD look-alikes | **Pass**: in the ZIP browser test and the filename fixture; collisions get `(1)`                                        |
+| E2  | One file over 4 GB on desktop Chrome                | Not yet run: `BENCH_BIG=1 npm run bench -- -g E2` (4.5 GiB, needs about 10 GB of free disk)                             |
+
+### Release gate (§9.7) status
+
+| Gate item           | Status                                                                                                                       |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| C1–C8 device pairs  | **Owner**: need the real iPhone, Android phone, Windows laptop and Mac                                                       |
+| N1–N8 network cases | **Owner**: N7 (no internet) and the browser side of N6 are exercised by tests; the rest need real networks                   |
+| S1–S10              | Pass (see `docs/security-review.md`)                                                                                         |
+| S11 packet capture  | **Owner**: steps in `docs/security-review.md`                                                                                |
+| OQ1, OQ2, OQ6, OQ8  | OQ2 (ZIP unzips identical) and OQ8 pass; OQ1 (the media corpus) and OQ6 (iPhone to Android HEIC) need real media and devices |
+| OQ3–OQ5             | **Owner**: spikes T-11 and T-12 on the iPhone and Android phone                                                              |
+| E1–E10              | E1, E3–E10 covered by tests and the cases above (E8 and E9 in unit tests, E10 in a browser test); E2 pending                 |
+| §6.6 checklist      | Items 1–7 and 9 pass; 8 and 10 are **Owner** steps                                                                           |
+
+The release gate for v0.1 is therefore **not yet met**, and `v0.1.0` has not been tagged: the device, network and account items above are the owner's to run and record (tasks T-08, T-11, T-12, T-14 and T-15).
+
 ### Real devices
 
 _Not yet collected._

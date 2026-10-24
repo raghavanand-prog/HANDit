@@ -1,0 +1,44 @@
+name: It worked / it didn't
+description: A 30-second report on a transfer, good or bad.
+labels: [report]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The quickest way to help. Issues on GitHub are public: please don't attach personal files or share a live code.
+  - type: dropdown
+    id: result
+    attributes:
+      label: Did it work?
+      options:
+        - It worked
+        - It worked, but something was confusing
+        - It didn't work
+    validations:
+      required: true
+  - type: input
+    id: devices
+    attributes:
+      label: From which device to which
+      description: For example, "iPhone to Android phone" or "Mac to Windows laptop".
+    validations:
+      required: true
+  - type: input
+    id: browsers
+    attributes:
+      label: Browsers
+      description: For example, "Safari and Chrome".
+  - type: dropdown
+    id: network
+    attributes:
+      label: Network
+      options:
+        - Same Wi-Fi
+        - Hotspot
+        - Different networks
+        - Not sure
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: How long it took, how many files, and what you'd change.
