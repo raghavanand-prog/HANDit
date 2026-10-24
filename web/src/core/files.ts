@@ -82,13 +82,32 @@ export function fileSource(store: Store, files: Map<number, File>): Source {
   };
 }
 
+/** A Sink that writes received files into OPFS and remembers each file's CRC-32 (for ZIP files). */
+export interface OpfsSink extends Sink {
+  crcs: Map<number, number>;
+}
+
 /** Writes received files into OPFS through the worker. */
-export function opfsSink(store: Store): Sink {
-  const sink: Sink = {
-    begin: (transfer, i) => store.call<void>({ op: "recv.begin", transfer, i }),
+export function opfsSink(store: Store): OpfsSink {
+  let current = -1;
+  const sink: OpfsSink = {
+    crcs: new Map(),
+    begin: (transfer, i) => {
+      current = i;
+      return store.call<void>({ op: "recv.begin", transfer, i });
+    },
     write: (data) => store.write(data),
-    end: () => store.call<{ size: number; root: string }>({ op: "recv.end" }),
-    discard: (transfer, i) => store.call<void>({ op: "recv.discard", transfer, i }),
+    end: async () => {
+      const result = await store.call<{ size: number; root: string; crc: number }>({
+        op: "recv.end",
+      });
+      sink.crcs.set(current, result.crc);
+      return result;
+    },
+    discard: (transfer, i) => {
+      sink.crcs.delete(i);
+      return store.call<void>({ op: "recv.discard", transfer, i });
+    },
   };
   store.onfail = (error) => sink.onfail?.(error);
   return sink;
