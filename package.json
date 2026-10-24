@@ -1,0 +1,38 @@
+{
+  "name": "handit",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Send files directly between any two devices from the browser.",
+  "author": "Raghav Anand",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=26"
+  },
+  "workspaces": [
+    "web",
+    "worker"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run build -w web",
+    "lint": "biome check .",
+    "typecheck": "tsc -p e2e && npm run typecheck --workspaces",
+    "test": "npm test --workspaces",
+    "check": "npm run lint && npm run typecheck && npm run build && npm test",
+    "preview": "npm run build && npm run dev -w worker",
+    "test:e2e": "playwright test",
+    "deploy": "npm run build && npm run deploy -w worker"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.2",
+    "@playwright/test": "1.64.1",
+    "@types/node": "26.6.5",
+    "typescript": "7.0.2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261019.1": true,
+    "fsevents@2.3.3": true
+  }
+}
