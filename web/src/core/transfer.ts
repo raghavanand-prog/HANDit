@@ -4,6 +4,7 @@
 // sender's, keeps the file only if both match, and the sender retries a failed
 // file once. Runs over any RTCDataChannel-like object, so it's testable in memory.
 import { type ErrorCode, HanditError, toHanditError } from "./codes";
+import { makeSafe } from "./names";
 import {
   CHUNK_BYTES,
   type Control,
@@ -419,6 +420,8 @@ export class Receiver extends Transfer {
     let items: OfferItem[] | null;
     try {
       items = this.assembler.add(message);
+      // Every name becomes safe before it's shown or saved; unsafe paths reject the offer.
+      if (items) items = makeSafe(items);
     } catch (error) {
       throw protocolError(String(error));
     }

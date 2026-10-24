@@ -3,6 +3,7 @@
 // - receiving: writes incoming bytes to the origin private file system (OPFS) with a
 //   sync access handle and hashes exactly what it writes.
 // Received files live in OPFS at incoming/<transfer id>/<index> until saved or cleaned up.
+import { crc32 } from "../core/crc32";
 import { BLOCK_BYTES, BlockHasher } from "../core/hash";
 
 // The parts of the worker and OPFS APIs used here (not in TypeScript's DOM types).
@@ -45,6 +46,7 @@ let receiving:
       handle: SyncAccessHandle;
       at: number;
       hasher: BlockHasher;
+      crc: number;
       error?: unknown;
     }
   | undefined;
@@ -95,6 +97,7 @@ async function handle(request: StoreRequest): Promise<unknown> {
         handle: access,
         at: 0,
         hasher: new BlockHasher(),
+        crc: 0,
       };
       return;
     }
@@ -102,8 +105,10 @@ async function handle(request: StoreRequest): Promise<unknown> {
       const current = receiving;
       if (!current || current.error) return;
       try {
+        const bytes = new Uint8Array(request.data);
         current.at += current.handle.write(request.data, { at: current.at });
-        await current.hasher.update(new Uint8Array(request.data));
+        current.crc = crc32(bytes, current.crc);
+        await current.hasher.update(bytes);
       } catch (error) {
         current.error = error;
         scope.postMessage(failure(0, error));
@@ -117,7 +122,7 @@ async function handle(request: StoreRequest): Promise<unknown> {
       current.handle.flush();
       current.handle.close();
       if (current.error) throw current.error;
-      return { size: current.at, root: await current.hasher.root() };
+      return { size: current.at, root: await current.hasher.root(), crc: current.crc };
     }
     case "recv.discard": {
       if (receiving?.transfer === request.transfer && receiving.i === request.i) {
