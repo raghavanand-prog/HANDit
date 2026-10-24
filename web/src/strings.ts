@@ -31,7 +31,8 @@ export const strings = {
     sendHint: "Pick files, then show a code for the other device to scan.",
     receive: "Receive",
     receiveHint: "Show a code here and scan it with the phone that has the files.",
-    laptopTip: "Between two laptops? Use Copy link on the code screen.",
+    laptopTip:
+      "Between two laptops? Show a code on one, then scan it with the other's camera, or use Copy link.",
   },
 
   send: {
@@ -66,6 +67,21 @@ export const strings = {
     newCode: "Show new code",
     preparing: "Getting a code ready…",
     qrLabel: "QR code for the link",
+  },
+
+  scan: {
+    title: "Scan a code",
+    hint: "Hold the other device's screen where this device's camera can see its code. Nothing is recorded or sent anywhere.",
+    preview: "Camera preview",
+    starting: "Starting the camera…",
+    denied:
+      "HANDit needs camera access to scan. Allow the camera for this site in your browser's settings, or ask the other device to use Copy link.",
+    none: "No camera was found on this device. Ask the other device to use Copy link, or scan its code with a phone.",
+    failed:
+      "The camera couldn't start. Close other apps that use it and try again, or use Copy link.",
+    stray: "That isn't a HANDit code. Point the camera at the code on the other device.",
+    switchCamera: "Switch camera",
+    link: "Scan a code with this device's camera",
   },
 
   join: {

@@ -76,6 +76,12 @@ export function Home() {
         </Link>
       </nav>
       <p className="text-sm text-muted">{strings.home.laptopTip}</p>
+      {typeof navigator !== "undefined" &&
+        typeof navigator.mediaDevices?.getUserMedia === "function" && (
+          <Link href="/scan" className="inline-block font-semibold underline underline-offset-4">
+            {strings.scan.link}
+          </Link>
+        )}
     </div>
   );
 }

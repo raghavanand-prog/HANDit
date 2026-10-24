@@ -19,13 +19,26 @@ import {
   Privacy,
 } from "./info";
 import { Home, JoinPage, ReceivePage, SendPage, SettingsPage } from "./pages";
-import { Link, usePath } from "./router";
+import { Link, navigate, usePath } from "./router";
+import { ScanPage } from "./ScanPage";
 
-function Page({ path, joinLink }: { path: string; joinLink: LinkResult | null }) {
+function Page({
+  path,
+  joinLink,
+  onScanned,
+}: {
+  path: string;
+  joinLink: LinkResult | null;
+  onScanned: (result: LinkResult) => void;
+}) {
   if (path === "/") return <Home />;
   if (path === "/send") return <SendPage />;
   if (path === "/receive") return <ReceivePage />;
-  if (path === "/j") return <JoinPage result={joinLink ?? { ok: false, code: "LINK_INVALID" }} />;
+  if (path === "/scan") return <ScanPage onLink={onScanned} />;
+  if (path === "/j") {
+    const result: LinkResult = joinLink ?? { ok: false, code: "LINK_INVALID" };
+    return <JoinPage key={result.ok ? result.link.secret.join() : result.code} result={result} />;
+  }
   if (path === "/settings") return <SettingsPage />;
   if (path === "/how-it-works") return <HowItWorks />;
   if (path === "/privacy") return <Privacy />;
@@ -46,8 +59,10 @@ const footerLinks: [string, string][] = [
   ["/about", strings.nav.about],
 ];
 
-export function App({ joinLink }: { joinLink: LinkResult | null }) {
+export function App({ joinLink: openedWith }: { joinLink: LinkResult | null }) {
   const path = usePath();
+  // A code opened from a link (read at start-up) or scanned with the in-page camera.
+  const [joinLink, setJoinLink] = useState<LinkResult | null>(openedWith);
   const device = useMemo(thisDevice, []);
   const [settings, setSettingsState] = useState<Settings>(() =>
     loadSettings(defaultDeviceName(device)),
@@ -108,7 +123,14 @@ export function App({ joinLink }: { joinLink: LinkResult | null }) {
         </header>
         <main id="main" className="mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:py-12">
           <Boundary key={path}>
-            <Page path={path} joinLink={joinLink} />
+            <Page
+              path={path}
+              joinLink={joinLink}
+              onScanned={(result) => {
+                setJoinLink(result);
+                navigate("/j", { replace: true });
+              }}
+            />
           </Boundary>
         </main>
         <footer className="mx-auto w-full max-w-xl space-y-3 px-4 pb-8 text-sm text-muted">

@@ -1,15 +1,12 @@
 // The code, drawn as an SVG from the QR matrix (no images, nothing a strict
 // Content Security Policy would block). Always dark on white, which every camera reads.
-import { encodeQR } from "qr";
 import { useMemo } from "react";
+import { qrMatrix } from "../core/scan";
 import { strings } from "../strings";
-
-// Four modules of white around the code, as the QR standard asks.
-const QUIET_ZONE = 4;
 
 export function QrCode({ text }: { text: string }) {
   const { size, path } = useMemo(() => {
-    const matrix = encodeQR(text, "raw", { ecc: "medium", border: QUIET_ZONE });
+    const matrix = qrMatrix(text);
     let d = "";
     matrix.forEach((row, y) => {
       row.forEach((dark, x) => {
