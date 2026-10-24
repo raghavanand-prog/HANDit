@@ -2,6 +2,10 @@
 
 Spike results, library choices and any change to an earlier decision, newest first.
 
+## 2026-10-24 — Name check (D-01)
+
+A web search for "HANDit" with file transfer, app, software and website found no tool or app with exactly this name. The closest is **handitoff**, a small browser-based transfer tool with QR pairing listed on Product Hunt (one listing, almost no traction): similar idea, different name. Other results were unrelated (MOVEit, SHAREit). No change of name. A formal trademark search is deferred until HANDit grows, as the plan says.
+
 ## 2026-10-24 — Confirm who receives (T-19)
 
 The sender taps **Allow** before the file list is sent. It was built with the screens (T-09) rather than in week 3, because the flow is simpler to build once than to retrofit, and it is **on by default**: it closes the residual of threat T4 (someone else opens a send code first) for everyone, not only for people who find the setting. The sender can switch it off in Settings.

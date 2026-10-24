@@ -24,7 +24,8 @@
     "test:e2e": "playwright test",
     "deploy": "npm run build && npm run deploy -w worker",
     "e2e:server": "node -e \"require('node:fs').rmSync('.wrangler/e2e',{recursive:true,force:true})\" && npm run build && npm run dev -w worker -- --persist-to ../.wrangler/e2e --var ALLOWED_ORIGINS:http://localhost:5173 --var LIMIT_MULTIPLIER:100",
-    "test:e2e:live": "playwright test --project=site --project=scanner"
+    "test:e2e:live": "playwright test --project=site --project=scanner",
+    "bench": "playwright test -c playwright.bench.config.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.2",
