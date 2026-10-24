@@ -24,6 +24,9 @@
     { "tag": "v1", "new_sqlite_classes": ["Room"] },
     { "tag": "v2", "new_sqlite_classes": ["Limiter"] }
   ],
+  // Extra browser origins allowed to open a Room, for local development only (comma-separated).
+  // Empty in production: only the site's own origin may connect.
+  "vars": { "ALLOWED_ORIGINS": "" },
   // No request logs: nothing records room IDs, links or frames.
   "observability": { "enabled": false }
 }

@@ -32,7 +32,14 @@ test("two browsers open a direct data channel through the Room", async ({ browse
         candidates.push(report.candidateType);
       }
     });
-    return { peer: c.peer.name, reply: await reply, candidates };
+    // The data path's transport, as the browser itself reports it.
+    const transport = [...(await c.pc.getStats()).values()].find((r) => r.type === "transport");
+    const dtls = {
+      state: transport?.dtlsState,
+      cipher: transport?.dtlsCipher,
+      version: transport?.tlsVersion,
+    };
+    return { peer: c.peer.name, reply: await reply, candidates, dtls };
   });
 
   expect(await owner.evaluate(() => (window as unknown as { joined: string }).joined)).toBe(
@@ -46,4 +53,8 @@ test("two browsers open a direct data channel through the Room", async ({ browse
   expect(guestSide.peer).toBe("Owner laptop");
   expect(guestSide.reply).toBe("owner got: hello over the direct channel");
   expect(guestSide.candidates).not.toContain("relay"); // direct only, no relay
+  // The data channel is carried over DTLS (T1: eavesdropping).
+  expect(guestSide.dtls.state).toBe("connected");
+  expect(guestSide.dtls.cipher).toMatch(/AES|CHACHA/);
+  expect(guestSide.dtls.version).toBeTruthy();
 });
