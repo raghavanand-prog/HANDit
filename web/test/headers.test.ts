@@ -6,8 +6,10 @@ import { CSP, SECURITY_HEADERS } from "../../worker/src/headers";
 // responses from worker/src/headers.ts. They must say the same thing.
 test("public/_headers matches the Worker's security headers", () => {
   const file = readFileSync(new URL("../public/_headers", import.meta.url), "utf8");
+  // Only the rules under "/*" (the rest of the file adds a few headers to single files).
+  const everyFile = file.slice(file.indexOf("\n/*\n") + 4).split("\n\n")[0] ?? "";
   const rules = Object.fromEntries(
-    file
+    everyFile
       .split("\n")
       .filter((line) => /^\s+[A-Za-z-]+: /.test(line))
       .map((line) => {

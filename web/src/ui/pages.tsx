@@ -2,9 +2,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { HanditError } from "../core/codes";
 import { type LinkResult, Mode } from "../core/link";
-import type { Picked } from "../core/picked";
+import { fromFiles, merge, type Picked } from "../core/picked";
 import { Session, type SessionOptions } from "../core/session";
 import { LIFETIMES, type Lifetime, MAX_NAME_LENGTH } from "../core/settings";
+import { takeSharedFiles } from "../core/share";
 import { strings } from "../strings";
 import { useApp } from "./app-context";
 import { ErrorView } from "./ErrorView";
@@ -91,6 +92,15 @@ export function SendPage() {
   const options = useOptions();
   const [picked, setPicked] = useState<Picked[]>([]);
   const [session, setSession] = useSessionSlot();
+  // Files shared into the installed app arrive as /send?shared=<id>.
+  useEffect(() => {
+    const id = new URLSearchParams(location.search).get("shared");
+    if (!id) return;
+    history.replaceState(null, "", "/send");
+    void takeSharedFiles(id).then((files) =>
+      setPicked((current) => merge(current, fromFiles(files))),
+    );
+  }, []);
   if (unsupported.length) return <Unsupported />;
   const start = () => setSession(Session.owner(options, Mode.SEND, picked));
   if (session) return <SessionView session={session} actions={{ restart: start }} />;

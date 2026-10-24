@@ -2,6 +2,18 @@
 
 Spike results, library choices and any change to an earlier decision, newest first.
 
+## 2026-10-24 — Installable app and sharing from the Android gallery (T-18)
+
+**Installable:** a web app manifest (name, icons including a maskable one, standalone display, theme colours) and a service worker. Chromium's own installability check reports no errors, so Chrome on Android and desktop offer to install it. Safari on iPhone can add it to the Home Screen (the manifest and an Apple touch icon are provided).
+
+**The service worker caches only the page shell:** the page, its hashed scripts and styles, the icons and the manifest. It never caches a WebSocket, a POST, another origin, or anything a transfer touches (a test lists the cache contents). Pages use the network first and fall back to the cached shell, so an installed app opened offline shows the plain "Couldn't reach HANDit" screen instead of a browser error. Old cache versions are deleted when a new worker takes over.
+
+**Spike: sharing from the Android gallery into the installed app.**
+- **Built:** a `share_target` in the manifest (POST, multipart, any file type). The service worker receives the files, parks them in a temporary cache entry and opens `/send?shared=<id>`; the Send page takes them out and deletes the entry at once, and a share that was never opened is deleted on the next visit. So nothing the user shared stays in the browser.
+- **Verified:** the hand-off in Chromium (files shared by a POST to the share target arrive in the Send list with the right names and sizes, the hand-off copy is gone, and a transfer started from them completes with the badge).
+- **Not verified:** Android's real Share menu, and whether the browser hands the service worker the original bytes of a gallery photo (the same question as spike T-12 about what Chrome hands over). It is checked on the borrowed Android phone with T-12: share a photo with a known SHA-256 into the installed app, send it, and compare hashes. Until then the limitation "Received files go to Downloads, not the gallery" stands, and the file picker remains the sure way to send originals.
+- **Privacy note:** the temporary cache entry is the only time a shared file is stored by HANDit outside the transfer's own private storage; it exists for the moment between the share and the Send page opening.
+
 ## 2026-10-24 — Webcam scanner (T-17): decoding approach
 
 **Question (the plan's spike):** which QR decoding approach works in each major browser, for laptop ↔ laptop without Copy link?
