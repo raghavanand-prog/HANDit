@@ -75,7 +75,13 @@ export class Room extends DurableObject<Env> {
     if (this.countFrame(ws) > MAX_FRAMES) return this.end(Close.TOO_MANY, "Too many frames");
 
     const other = this.ctx.getTags(ws)[0] === "owner" ? "guest" : "owner";
-    for (const peer of this.ctx.getWebSockets(other)) peer.send(message);
+    for (const peer of this.ctx.getWebSockets(other)) {
+      try {
+        peer.send(message);
+      } catch {
+        // The other side already left (both can close at about the same time).
+      }
+    }
   }
 
   // Either side leaving ends the introduction: before a guest joins, that cancels

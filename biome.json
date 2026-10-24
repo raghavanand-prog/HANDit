@@ -17,7 +17,18 @@
   "overrides": [
     {
       "includes": ["web/src/**", "worker/src/**"],
-      "linter": { "rules": { "suspicious": { "noConsole": "error" } } }
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "error"
+          }
+        }
+      }
     }
-  ]
+  ],
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  }
 }

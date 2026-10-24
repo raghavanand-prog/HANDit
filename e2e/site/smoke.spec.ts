@@ -4,14 +4,25 @@ test("the home page shows Send, Receive and the public-test label", async ({ pag
   await page.goto("/");
   await expect(page).toHaveTitle("HANDit");
   await expect(page.getByRole("heading", { name: "HANDit" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Send" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Receive" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Send/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Receive/ })).toBeVisible();
   await expect(page.getByText("Public test — not independently security-audited")).toBeVisible();
 });
 
-test("app paths such as /j load the app", async ({ page }) => {
+test("app paths load the app; /j without a code explains the link is damaged", async ({ page }) => {
+  await page.goto("/how-it-works");
+  await expect(page.getByRole("heading", { name: "How it works" })).toBeVisible();
   await page.goto("/j");
-  await expect(page.getByRole("heading", { name: "HANDit" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "This link doesn't work." })).toBeVisible();
+});
+
+test("every message code has a help page", async ({ page }) => {
+  await page.goto("/help/P2P_FAILED");
+  await expect(
+    page.getByRole("heading", { name: "These devices couldn't connect directly." }),
+  ).toBeVisible();
+  await page.goto("/help/NOT_A_CODE");
+  await expect(page.getByText("There's no help page for that.")).toBeVisible();
 });
 
 test("the Worker answers /ws/ paths and refuses bad room IDs", async ({ request }) => {

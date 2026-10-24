@@ -30,7 +30,14 @@ export default defineConfig({
   webServer: [
     ...(liveUrl
       ? []
-      : [{ command: "npm run preview", url: "http://localhost:8787", reuseExistingServer: reuse }]),
+      : [
+          // A fresh local Worker state each run, so earlier runs don't count towards the per-IP limits.
+          {
+            command: "npm run e2e:server",
+            url: "http://localhost:8787",
+            reuseExistingServer: reuse,
+          },
+        ]),
     {
       command: "npx vite --port 5173 --strictPort",
       cwd: "web",

@@ -127,8 +127,12 @@ abstract class Transfer {
 
   /** Cancels from this side; the other device is told. */
   cancel() {
-    this.send({ t: "cancel" });
-    this.fail(new HanditError("CANCELLED_BY_USER"));
+    this.abort(new HanditError("CANCELLED_BY_USER"));
+  }
+
+  /** Ends the transfer with an error; the other device is told it was cancelled. */
+  abort(error: HanditError) {
+    this.fail(error, true);
   }
 
   protected abstract main(): Promise<void>;
