@@ -4,12 +4,12 @@ How HANDit is tested, what each automated test covers, and the results for each 
 
 ## Running the tests
 
-| What                                                              | Command                                                              |
-| ----------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Everything CI runs: lint, type-check, build, web and Worker tests | `npm run check`                                                      |
-| Browser tests against a local copy of the site                    | `npm run test:e2e`                                                   |
-| The same browser tests against the live site                      | `BASE_URL=https://handit.handit-worker.workers.dev npm run test:e2e` |
-| A smaller large-file test                                         | `E2E_BIG_MB=64 npm run test:e2e`                                     |
+| What                                                              | Command                                                                   |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Everything CI runs: lint, type-check, build, web and Worker tests | `npm run check`                                                           |
+| Browser tests against a local copy of the site                    | `npm run test:e2e`                                                        |
+| The site and scanner browser tests against the live site          | `BASE_URL=https://handit.handit-worker.workers.dev npm run test:e2e:live` |
+| A smaller large-file test                                         | `E2E_BIG_MB=64 npm run test:e2e`                                          |
 
 The browser tests drive real Chromium instances, with two separate browser contexts standing in for two devices, through the real Room and a real WebRTC connection.
 

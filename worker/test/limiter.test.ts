@@ -1,7 +1,7 @@
 import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
-import { clientKey, LIMITS, WINDOW_MS } from "../src/limiter";
+import { clientKey, LIMITS, limitsFor, WINDOW_MS } from "../src/limiter";
 import { connect, newIp, newRoomId } from "./helpers";
 
 const limiter = (ip: string) => env.LIMITER.getByName(ip);
@@ -103,5 +103,20 @@ describe("clientKey", () => {
 
   test("a missing address shares one bucket", () => {
     expect(key()).toBe("unknown");
+  });
+});
+
+describe("limitsFor", () => {
+  test("production uses the base limits: 20 codes and 60 joins", () => {
+    expect(limitsFor({})).toEqual({ room: 20, join: 60 });
+    expect(limitsFor({ LIMIT_MULTIPLIER: "" })).toEqual({ room: 20, join: 60 });
+  });
+
+  test("the test multiplier raises them, and nonsense never lowers them", () => {
+    expect(limitsFor({ LIMIT_MULTIPLIER: "100" })).toEqual({ room: 2000, join: 6000 });
+    expect(limitsFor({ LIMIT_MULTIPLIER: "5000" })).toEqual({ room: 20_000, join: 60_000 });
+    for (const bad of ["0", "-5", "abc", "NaN", "0.2"]) {
+      expect(limitsFor({ LIMIT_MULTIPLIER: bad })).toEqual({ room: 20, join: 60 });
+    }
   });
 });
