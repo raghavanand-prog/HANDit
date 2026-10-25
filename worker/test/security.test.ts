@@ -78,7 +78,7 @@ describe("origin check", () => {
 
   test("a refused origin doesn't use up the per-IP allowance", async () => {
     const ip = "198.51.100.7";
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0; i < 310; i++) {
       await fetchPath(room(), upgrade({ Origin: "https://evil.example", "CF-Connecting-IP": ip }));
     }
     const ok = await connect(newRoomId(), "role=owner&ttl=60", ip);

@@ -17,24 +17,24 @@ const age = (ip: string, ms: number) =>
   });
 
 describe("counting (S7)", () => {
-  test("at most 20 new codes per IP; joins are counted separately", async () => {
+  test("at most 100 new codes per IP; joins are counted separately", async () => {
     const ip = newIp();
-    expect(LIMITS.room).toBe(20);
-    for (let i = 0; i < 20; i++) expect(await limiter(ip).allow("room")).toBe(true);
+    expect(LIMITS.room).toBe(100);
+    for (let i = 0; i < 100; i++) expect(await limiter(ip).allow("room")).toBe(true);
     expect(await limiter(ip).allow("room")).toBe(false);
     expect(await limiter(ip).allow("join")).toBe(true);
   });
 
-  test("at most 60 join attempts per IP", async () => {
+  test("at most 300 join attempts per IP", async () => {
     const ip = newIp();
-    expect(LIMITS.join).toBe(60);
-    for (let i = 0; i < 60; i++) expect(await limiter(ip).allow("join")).toBe(true);
+    expect(LIMITS.join).toBe(300);
+    for (let i = 0; i < 300; i++) expect(await limiter(ip).allow("join")).toBe(true);
     expect(await limiter(ip).allow("join")).toBe(false);
   });
 
   test("attempts older than 10 minutes no longer count", async () => {
     const ip = newIp();
-    for (let i = 0; i < 20; i++) await limiter(ip).allow("room");
+    for (let i = 0; i < 100; i++) await limiter(ip).allow("room");
     expect(await limiter(ip).allow("room")).toBe(false);
     await age(ip, WINDOW_MS);
     expect(await limiter(ip).allow("room")).toBe(true);
@@ -62,25 +62,25 @@ describe("counting (S7)", () => {
 });
 
 describe("through the Worker", () => {
-  test("the 21st new code from one IP is closed with 4429", async () => {
+  test("the 101st new code from one IP is closed with 4429", async () => {
     const ip = newIp();
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 100; i++) {
       expect(await (await connect(newRoomId(), "role=owner&ttl=60", ip)).isOpen()).toBe(true);
     }
     const refused = await connect(newRoomId(), "role=owner&ttl=60", ip);
     expect(await refused.closed).toEqual({ code: 4429, reason: "Too many attempts" });
     const otherIp = await connect(newRoomId(), "role=owner&ttl=60", newIp());
     expect(await otherIp.isOpen()).toBe(true);
-  });
+  }, 60_000);
 
-  test("the 61st join attempt from one IP is closed with 4429, even if earlier ones failed", async () => {
+  test("the 301st join attempt from one IP is closed with 4429, even if earlier ones failed", async () => {
     const ip = newIp();
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 300; i++) {
       expect((await (await connect(newRoomId(), "role=guest", ip)).closed).code).toBe(4404);
     }
     const refused = await connect(newRoomId(), "role=guest", ip);
     expect(await refused.closed).toEqual({ code: 4429, reason: "Too many attempts" });
-  });
+  }, 60_000);
 });
 
 describe("clientKey", () => {
@@ -107,16 +107,16 @@ describe("clientKey", () => {
 });
 
 describe("limitsFor", () => {
-  test("production uses the base limits: 20 codes and 60 joins", () => {
-    expect(limitsFor({})).toEqual({ room: 20, join: 60 });
-    expect(limitsFor({ LIMIT_MULTIPLIER: "" })).toEqual({ room: 20, join: 60 });
+  test("production uses the base limits: 100 codes and 300 joins", () => {
+    expect(limitsFor({})).toEqual({ room: 100, join: 300 });
+    expect(limitsFor({ LIMIT_MULTIPLIER: "" })).toEqual({ room: 100, join: 300 });
   });
 
   test("the test multiplier raises them, and nonsense never lowers them", () => {
-    expect(limitsFor({ LIMIT_MULTIPLIER: "100" })).toEqual({ room: 2000, join: 6000 });
-    expect(limitsFor({ LIMIT_MULTIPLIER: "5000" })).toEqual({ room: 20_000, join: 60_000 });
+    expect(limitsFor({ LIMIT_MULTIPLIER: "100" })).toEqual({ room: 10_000, join: 30_000 });
+    expect(limitsFor({ LIMIT_MULTIPLIER: "5000" })).toEqual({ room: 100_000, join: 300_000 });
     for (const bad of ["0", "-5", "abc", "NaN", "0.2"]) {
-      expect(limitsFor({ LIMIT_MULTIPLIER: bad })).toEqual({ room: 20, join: 60 });
+      expect(limitsFor({ LIMIT_MULTIPLIER: bad })).toEqual({ room: 100, join: 300 });
     }
   });
 });

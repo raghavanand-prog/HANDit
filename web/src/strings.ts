@@ -302,7 +302,7 @@ export const messages: Record<ErrorCode, Message> = {
 export const messageText = {
   tooManyCodes: {
     what: "Too many codes were made from this network just now.",
-    why: "To keep HANDit free for everyone, each network can make 20 codes and 60 join attempts every 10 minutes.",
+    why: "To keep HANDit free for everyone, each network can make 100 codes and 300 join attempts every 10 minutes.",
     next: "Wait a few minutes, then try again.",
   },
   offerTimeoutRecipient: "No response — nothing was received.",
