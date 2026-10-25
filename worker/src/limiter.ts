@@ -1,10 +1,10 @@
 import { DurableObject } from "cloudflare:workers";
 
-// Per-IP abuse limits: at most 20 new codes and 60 join attempts per 10 minutes.
+// Per-IP abuse limits: at most 100 new codes and 300 join attempts per 10 minutes.
 // One Limiter per client IP keeps the times of recent attempts, nothing else,
 // and deletes them 10 minutes after the last one.
 export const WINDOW_MS = 10 * 60 * 1000;
-export const LIMITS = { room: 20, join: 60 } as const;
+export const LIMITS = { room: 100, join: 300 } as const;
 export type LimitKind = keyof typeof LIMITS;
 
 /**

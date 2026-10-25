@@ -44,6 +44,12 @@ The frames are drawn on a canvas the way a camera delivers them, in each engine.
 
 **Scanner rules:** only a link from this site's own origin and path `/j` is accepted; anything else (a Wi-Fi code, another site's link) is ignored and scanning continues. The camera is stopped as soon as a code is read, and no video leaves the page. The Permissions-Policy allows the camera for the site only.
 
+## 2026-10-25 — Per-IP limits raised from 20 / 60 to 100 / 300
+
+The plan's §5.4 set at most 20 new codes and 60 join attempts per client address every 10 minutes. Repeated testing from one network, and several people sharing one Wi-Fi or a campus network (which count as one address), hit that too easily. The owner asked for it to be raised; it is now **100 codes and 300 join attempts per 10 minutes**, with everything else about the Limiter unchanged (sliding window, IPv6 per /64, nothing stored but attempt times).
+
+It is not unlimited on purpose: the free Cloudflare plan allows about 100,000 Worker requests a day, and a single script with no limit could use them all, stopping the site for everyone until midnight UTC (threat T7). At 100 codes per 10 minutes one address can make about 14,000 codes a day, which is below that ceiling.
+
 ## 2026-10-24 — The Room and the per-IP limits
 
 **Per-IP limits use a second, tiny Durable Object, `Limiter`,** one per client address. It counts exactly what the protocol asks for: at most 20 new codes and 60 join attempts per 10 minutes, over a sliding window.
