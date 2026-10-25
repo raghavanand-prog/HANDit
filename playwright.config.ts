@@ -72,6 +72,16 @@ export default defineConfig({
             reuseExistingServer: reuse,
           },
         ]),
+    // A fake GitHub and Google for the sign-in tests (never the real providers).
+    ...(liveUrl
+      ? []
+      : [
+          {
+            command: "node e2e/auth/mock-provider.mjs",
+            url: "http://localhost:8790/health",
+            reuseExistingServer: reuse,
+          },
+        ]),
     {
       command: "npx vite --port 5173 --strictPort",
       cwd: "web",

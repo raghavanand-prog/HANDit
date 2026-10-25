@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("the home page shows Send, Receive and the public-test label", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveTitle("HANDit");
-  await expect(page.getByRole("heading", { name: "HANDit" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Hand your files to any device." })).toBeVisible();
   await expect(page.getByRole("link", { name: /^Send/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /^Receive/ })).toBeVisible();
   await expect(page.getByText("Public test — not independently security-audited")).toBeVisible();

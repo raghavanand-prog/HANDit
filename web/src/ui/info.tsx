@@ -65,20 +65,6 @@ export function Privacy() {
   );
 }
 
-export function Limitations() {
-  const page = pages.limitations;
-  return (
-    <Prose>
-      <Title>{page.title}</Title>
-      <ol className="list-decimal space-y-2 pl-5">
-        {page.items.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ol>
-    </Prose>
-  );
-}
-
 export function About() {
   const page = pages.about;
   return (
@@ -137,13 +123,19 @@ export function HelpIndex() {
       <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
         {ERROR_CODES.map((code) => (
           <li key={code}>
-            <Link href={`/help/${code}`} className="block px-4 py-3 hover:bg-paper">
+            <Link href={`/help/${code}`} className="block px-4 py-3 hover:bg-accent-soft">
               <span className="block font-semibold">{messages[code].what}</span>
-              <span className="font-mono text-xs text-muted">{code}</span>
+              <span className="font-mono text-sm text-muted">{code}</span>
             </Link>
           </li>
         ))}
       </ul>
+      <h2 className="font-display text-xl font-bold">{pages.help.goodToKnow}</h2>
+      <ol className="list-decimal space-y-2 pl-5">
+        {pages.limitations.items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ol>
     </Prose>
   );
 }

@@ -11,7 +11,7 @@ import { useApp } from "./app-context";
 import { ErrorView } from "./ErrorView";
 import { FilePicker } from "./FilePicker";
 import { Button, Switch, Title } from "./parts";
-import { Link, navigate } from "./router";
+import { navigate } from "./router";
 import { SessionView } from "./SessionView";
 
 function useOptions(): SessionOptions {
@@ -45,45 +45,6 @@ function Unsupported() {
         {strings.actions.home}
       </Button>
     </ErrorView>
-  );
-}
-
-export function Home() {
-  return (
-    <div className="space-y-10">
-      <header className="space-y-4">
-        <h1
-          tabIndex={-1}
-          className="font-display text-6xl font-extrabold tracking-tight outline-none sm:text-7xl"
-        >
-          HAND<span className="rounded-xl bg-tag px-2 text-tag-ink">it</span>
-        </h1>
-        <p className="max-w-prose text-lg text-muted">{strings.pitch}</p>
-      </header>
-      <nav aria-label={`${strings.home.send} / ${strings.home.receive}`} className="grid gap-4">
-        <Link
-          href="/send"
-          className="group block rounded-3xl bg-accent p-6 text-accent-ink no-underline hover:opacity-95"
-        >
-          <span className="block font-display text-3xl font-bold">{strings.home.send}</span>
-          <span className="mt-1 block opacity-80">{strings.home.sendHint}</span>
-        </Link>
-        <Link
-          href="/receive"
-          className="block rounded-3xl border-2 border-ink p-6 text-ink no-underline hover:bg-accent-soft"
-        >
-          <span className="block font-display text-3xl font-bold">{strings.home.receive}</span>
-          <span className="mt-1 block text-muted">{strings.home.receiveHint}</span>
-        </Link>
-      </nav>
-      <p className="text-sm text-muted">{strings.home.laptopTip}</p>
-      {typeof navigator !== "undefined" &&
-        typeof navigator.mediaDevices?.getUserMedia === "function" && (
-          <Link href="/scan" className="inline-block font-semibold underline underline-offset-4">
-            {strings.scan.link}
-          </Link>
-        )}
-    </div>
   );
 }
 

@@ -1,3 +1,4 @@
+import { type AuthEnv, handleAuth } from "./auth";
 import { reply } from "./headers";
 import { clientKey } from "./limiter";
 import { Close, parseJoin, refuse } from "./room";
@@ -23,6 +24,9 @@ export function originAllowed(request: Request, url: URL, env: Env): boolean {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    // Optional sign-in (/auth/*): nothing here is needed to send or receive files.
+    const auth = await handleAuth(request, env as unknown as AuthEnv);
+    if (auth) return auth;
     const roomId = url.pathname.match(ROOM_PATH)?.[1];
     if (!roomId) return reply("Not found", 404);
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {

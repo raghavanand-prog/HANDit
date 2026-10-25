@@ -20,19 +20,59 @@ export const strings = {
     settings: "Settings",
     howItWorks: "How it works",
     privacy: "Privacy",
-    limitations: "Known limitations",
     help: "Help",
     about: "About",
     feedback: "Feedback",
   },
 
   home: {
-    send: "Send",
+    badge: "Free · Nothing to install · No account needed",
+    headline: "Hand your files to any device.",
+    lead: "Send photos, videos and files between any phone or computer. Scan a code, tap accept, done. Original quality, never compressed, never uploaded.",
+    send: "Send files",
     sendHint: "Pick files, then show a code for the other device to scan.",
-    receive: "Receive",
+    receive: "Receive files",
     receiveHint: "Show a code here and scan it with the phone that has the files.",
     laptopTip:
       "Between two laptops? Show a code on one, then scan it with the other's camera, or use Copy link.",
+    sceneLabel:
+      "A laptop sending photos, a video and a document straight to a phone, locked in between",
+    chips: ["Original quality", "Direct and encrypted", "Nothing is uploaded"],
+    whyTitle: "Made to be trusted",
+    why: [
+      {
+        title: "Original quality, proven",
+        text: "Nothing is compressed, resized or converted. Every file is fingerprinted on both devices, and the badge appears only when every one matches.",
+      },
+      {
+        title: "Straight between devices",
+        text: "Files travel directly from one browser to the other, encrypted. HANDit's server only makes the introduction and can't read it.",
+      },
+      {
+        title: "Nothing to install",
+        text: "It's a web page. Open it on an iPhone, an Android phone, Windows, Mac, Linux or a Chromebook, with no app and no sign-up.",
+      },
+    ],
+    stepsTitle: "Three steps",
+    steps: [
+      {
+        title: "Show a code",
+        text: "Pick your files and a one-time QR code appears. It works once and expires in two minutes.",
+      },
+      {
+        title: "Scan it",
+        text: "Point the other device's camera at it. No app needed, the camera app opens the link.",
+      },
+      {
+        title: "Accept",
+        text: "The other person sees what's coming and taps Accept. The files arrive identical, and HANDit proves it.",
+      },
+    ],
+    platformsTitle: "Works wherever your files are",
+    platforms: ["iPhone", "Android", "Windows", "Mac", "Linux", "Chromebook"],
+    ctaTitle: "Ready when you are.",
+    ctaSend: "Start sending",
+    ctaReceive: "Start receiving",
   },
 
   send: {
@@ -67,6 +107,30 @@ export const strings = {
     newCode: "Show new code",
     preparing: "Getting a code ready…",
     qrLabel: "QR code for the link",
+  },
+
+  signin: {
+    title: "Welcome to HANDit",
+    lead: "Sign in if you like. You never need an account to send or receive files.",
+    github: "Continue with GitHub",
+    google: "Continue with Google",
+    guest: "Continue without an account",
+    whatSaved: "What signing in does",
+    points: [
+      "Shows your name, and sets it as your device name so the other device sees who you are.",
+      "Keeps one small cookie in this browser for 30 days. HANDit's server stores nothing about you: no email, no picture, no history.",
+      "Your files never depend on it: they go straight between the two devices either way.",
+    ],
+    error:
+      "Signing in didn't complete, and nothing was changed. Try again, or continue without an account.",
+    unavailable:
+      "Signing in isn't switched on right now. You can still send and receive as a guest.",
+    signIn: "Sign in",
+    signOut: "Sign out",
+    signedInAs: (name: string) => `Signed in as ${name}`,
+    via: (provider: string) => (provider === "github" ? "with GitHub" : "with Google"),
+    account: "Account menu",
+    welcomeBack: (name: string) => `Welcome back, ${name}`,
   },
 
   scan: {
@@ -409,12 +473,13 @@ export const pages = {
   privacy: {
     title: "Privacy",
     points: [
-      "No accounts, cookies, analytics, ads or trackers.",
+      "No account is needed. Signing in is optional; if you choose to, one small cookie in your browser keeps your name and the provider (GitHub or Google) for 30 days. HANDit's server stores nothing about you: no email, no picture, no history.",
+      "No analytics, ads or trackers.",
       "Your files go only to the other device, directly. They never pass through or stay on a server.",
       "The page talks only to HANDit's own server (for the page and the introduction) and to Cloudflare's STUN service, which tells a browser its public address.",
       "Links contain only a random secret, a mode and an expiry — no names, sizes or anything about you.",
       "Device names and file lists are shown only to the other device, and only after the seal check.",
-      "This browser stores only your settings. Received files are held in its private storage until you save them, then deleted.",
+      "This browser stores your settings and, if you sign in, that one cookie. Received files are held in its private storage until you save them, then deleted.",
       "The server keeps no logs of rooms, links or messages, and deletes each room when it ends.",
     ],
     ipTitle: "Your IP address",
@@ -439,7 +504,7 @@ export const pages = {
   about: {
     title: "About HANDit",
     body: [
-      "HANDit sends photos, videos and files directly between any two devices — iPhone, Android, Windows, Mac, Linux — from the browser. Nothing to install, no account, nothing uploaded.",
+      "HANDit sends photos, videos and files directly between any two devices — iPhone, Android, Windows, Mac, Linux — from the browser. Nothing to install, no account needed, nothing uploaded.",
       "It's open source, so anyone can check how it works.",
     ],
     source: "Source code on GitHub",
@@ -461,6 +526,7 @@ export const pages = {
   help: {
     title: "Help",
     intro: "What each message means and what to do.",
+    goodToKnow: "Good to know",
     notFound: "There's no help page for that.",
   },
   notFound: { title: "Page not found", body: "That page doesn't exist." },

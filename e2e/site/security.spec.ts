@@ -101,6 +101,7 @@ test("S10: every response carries the security headers", async ({ page, request 
     "/",
     "/j",
     "/send",
+    "/signin",
     "/how-it-works",
     script ?? "/assets/x.js",
     "/favicon.svg",
