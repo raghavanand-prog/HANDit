@@ -8,9 +8,10 @@
   "preview_urls": false,
   "assets": {
     "directory": "../web/dist",
-    // Paths like /j load the app; page loads never run the Worker, so they cost nothing.
+    // Paths like /j load the app; page loads never run the Worker, so they cost nothing. Only the
+    // Room (/ws/*) and optional sign-in (/auth/*) do.
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/ws/*"]
+    "run_worker_first": ["/ws/*", "/auth/*"]
   },
   // Room: one per code. Limiter: one per client IP, for the per-IP limits.
   "durable_objects": {

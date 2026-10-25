@@ -2,7 +2,7 @@
 
 **Send photos, videos and files from any phone or computer to any other — just open the link and scan the code. Original quality, never compressed, never uploaded.**
 
-**Live: [handit.handit-worker.workers.dev](https://handit.handit-worker.workers.dev)** — nothing to install, no account.
+**Live: [handit.handit-worker.workers.dev](https://handit.handit-worker.workers.dev)** — nothing to install, and no account needed.
 
 > **Public test — not independently security-audited.** This is the one official address; check it before you scan or trust a code.
 
@@ -17,6 +17,7 @@
 - **Direct and encrypted.** Files go straight from browser to browser over an encrypted WebRTC connection. They never pass through a server. If a network blocks direct connections, HANDit says so instead of quietly relaying your files.
 - **Original quality, proven.** Nothing is compressed, resized or converted. Every file is fingerprinted with SHA-256 on both sides, and "Original quality · Identical ✓" appears only when every file matches.
 - **You decide.** The recipient always sees the file list and taps Accept. The sender sees who joined and taps Allow before anything is offered. Apps and scripts are flagged, and received files are never opened for you.
+- **Sign in if you like.** Optional sign-in with GitHub or Google shows your name and names your device. HANDit's server keeps nothing about you: one signed cookie in your browser, and no email, picture or history.
 - **Installable.** Add it to a phone's home screen or a desktop; it opens even offline (and tells you it can't reach the server).
 
 ## How it works
@@ -100,7 +101,7 @@ How the tests are organised, and how every message the app can show is triggered
 | `docs/`   | Decisions, test results, the security review, screenshots                                                                                                                                                                                              |
 | `tools/`  | Scripts that draw the app icons and take the screenshots                                                                                                                                                                                               |
 
-## Known limitations
+## Known limitations (also under Help in the app)
 
 Both devices need internet access to start (the files themselves go directly). Keep both tabs open and the screen on until it finishes. Very large transfers are limited by the receiving browser's storage; HANDit checks before you accept. Some networks (strict office or campus firewalls, some mobile carriers, VPNs) block direct connections: use the same Wi-Fi or a phone's hotspot. On iPhone, pick photos the way the tip on the Send screen says to keep originals. Received files go to Downloads (or Files), not straight into the gallery: on a phone use Save / Share → Save to Photos.
 

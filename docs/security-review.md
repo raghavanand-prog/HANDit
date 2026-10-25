@@ -37,20 +37,21 @@ Last run: 2026-10-24, on `main` plus the T-13 changes.
 
 ## How the §6.3 threats are covered
 
-| Threat                                   | Mitigation                                                                                     | Evidence                                                      |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| T1 Eavesdropping                         | DTLS on the data channel; sealed introduction                                                  | Connection test (DTLS connected, AES/ChaCha); S1; S11 pending |
-| T2 Network man in the middle             | Fingerprints travel only inside the seal                                                       | S3                                                            |
-| T3 Malicious Room                        | It can't read or change sealed frames undetected; keeps nothing                                | S3; Room tests; logging off                                   |
-| T4 Someone else gets the code            | 2-minute life, one guest ever, **Confirm who receives** (Allow) before the file list is sent   | Browser journeys; Room tests                                  |
-| T5 A malicious file                      | Review screen, app and script warnings, never auto-opened                                      | Names and review tests                                        |
-| T6 Hostile names                         | The filename rules                                                                             | S9                                                            |
-| T7 Abuse                                 | Per-IP limits, size and count limits, origin check                                             | Worker tests                                                  |
-| T8 Corrupted file                        | DTLS and the SHA-256 root check                                                                | Transfer tests, 1 GiB browser test                            |
-| T9 Replay                                | Fresh secret per code, sequence numbers, one guest                                             | S4, S5                                                        |
-| T10 Malicious page delivered by the site | CSP and headers (S10), no third-party code at runtime, pinned dependencies, OSV and Dependabot | Items 7 and 9; items 10 pending                               |
-| T11 Look-alike sites                     | One official URL in the README; "check the address" on the About page                          |                                                               |
-| T12 IP address exposure                  | Documented on the Privacy page                                                                 |                                                               |
+| Threat                                   | Mitigation                                                                                                                                                                                                                                         | Evidence                                                      |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| T1 Eavesdropping                         | DTLS on the data channel; sealed introduction                                                                                                                                                                                                      | Connection test (DTLS connected, AES/ChaCha); S1; S11 pending |
+| T2 Network man in the middle             | Fingerprints travel only inside the seal                                                                                                                                                                                                           | S3                                                            |
+| T3 Malicious Room                        | It can't read or change sealed frames undetected; keeps nothing                                                                                                                                                                                    | S3; Room tests; logging off                                   |
+| T4 Someone else gets the code            | 2-minute life, one guest ever, **Confirm who receives** (Allow) before the file list is sent                                                                                                                                                       | Browser journeys; Room tests                                  |
+| T5 A malicious file                      | Review screen, app and script warnings, never auto-opened                                                                                                                                                                                          | Names and review tests                                        |
+| T6 Hostile names                         | The filename rules                                                                                                                                                                                                                                 | S9                                                            |
+| T7 Abuse                                 | Per-IP limits, size and count limits, origin check                                                                                                                                                                                                 | Worker tests                                                  |
+| T8 Corrupted file                        | DTLS and the SHA-256 root check                                                                                                                                                                                                                    | Transfer tests, 1 GiB browser test                            |
+| T9 Replay                                | Fresh secret per code, sequence numbers, one guest                                                                                                                                                                                                 | S4, S5                                                        |
+| Sign-in (optional)                       | State and PKCE on every sign-in, a signed pending-sign-in cookie that expires in 10 minutes, secrets only on the server, a session cookie that is HttpOnly, Secure and SameSite=Lax holding only a name and a provider, nothing stored server-side | 31 Worker tests; browser tests against fake providers         |
+| T10 Malicious page delivered by the site | CSP and headers (S10), no third-party code at runtime, pinned dependencies, OSV and Dependabot                                                                                                                                                     | Items 7 and 9; items 10 pending                               |
+| T11 Look-alike sites                     | One official URL in the README; "check the address" on the About page                                                                                                                                                                              |                                                               |
+| T12 IP address exposure                  | Documented on the Privacy page                                                                                                                                                                                                                     |                                                               |
 
 ## Notes
 
@@ -76,6 +77,24 @@ On the Mac, with Wireshark installed (free, wireshark.org) or `tcpdump` and Wire
 - **Two-factor authentication.** GitHub: **Settings → Password and authentication**. Cloudflare: **My Profile → Authentication**.
 - **Protect `main`.** Repository **Settings → Rules → Rulesets → New branch ruleset**, target the default branch, enable **Require a pull request before merging** and **Require status checks to pass** (add `check`).
 - **Deploy token.** The Cloudflare token for CI should only have **Account → Workers Scripts → Edit** for your account. Add it with the account ID as the repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` under **Settings → Secrets and variables → Actions**.
+
+### Optional sign-in: connecting GitHub and Google (about 15 minutes)
+
+Sign-in stays switched off, and invisible, until you do this. The callback addresses assume `https://handit.handit-worker.workers.dev`; use your own address if it changes.
+1. **GitHub.** github.com → **Settings → Developer settings → OAuth Apps → New OAuth App**. Application name `HANDit`, homepage URL `https://handit.handit-worker.workers.dev`, **Authorization callback URL** `https://handit.handit-worker.workers.dev/auth/github/callback`. Create it, then **Generate a new client secret**.
+2. **Google.** console.cloud.google.com → create a project → **APIs & Services → OAuth consent screen** (External, app name HANDit, scopes `openid` and `profile`) → **Credentials → Create credentials → OAuth client ID → Web application**, with the **authorized redirect URI** `https://handit.handit-worker.workers.dev/auth/google/callback`. (Google may keep the app in "Testing" until you publish it; publishing a basic `openid profile` app needs no review.)
+3. **Give the Worker the values**, one command each from the `worker` folder, pasting the value when asked (don't put them in chat or in a file). The first one makes up a random signing key:
+
+   ```bash
+   openssl rand -base64 48 | npx wrangler secret put SESSION_SECRET
+   npx wrangler secret put GITHUB_CLIENT_ID
+   npx wrangler secret put GITHUB_CLIENT_SECRET
+   npx wrangler secret put GOOGLE_CLIENT_ID
+   npx wrangler secret put GOOGLE_CLIENT_SECRET
+   ```
+
+   You can set up only one provider: the page offers whichever has both its ID and secret.
+4. Reload the site: **Sign in** appears in the header. If something is off, the sign-in page says "Signing in didn't complete" and nothing is changed.
 
 ### 9: Dependabot and private reporting
 

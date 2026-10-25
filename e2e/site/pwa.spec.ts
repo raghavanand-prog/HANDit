@@ -51,8 +51,8 @@ test("the service worker caches only the page shell", async ({ page }) => {
     return out;
   });
   const names = Object.keys(cached);
-  expect(names).toEqual(["handit-shell-v1"]);
-  const paths = cached["handit-shell-v1"] ?? [];
+  expect(names).toEqual(["handit-shell-v2"]);
+  const paths = cached["handit-shell-v2"] ?? [];
   expect(paths.length).toBeGreaterThan(0);
   for (const path of paths) {
     expect(path, path).toMatch(/^\/($|assets\/|icon-|apple-touch-icon|favicon|manifest)/);

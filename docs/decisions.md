@@ -44,6 +44,20 @@ The frames are drawn on a canvas the way a camera delivers them, in each engine.
 
 **Scanner rules:** only a link from this site's own origin and path `/j` is accepted; anything else (a Wi-Fi code, another site's link) is ignored and scanning continues. The camera is stopped as soon as a code is read, and no video leaves the page. The Permissions-Policy allows the camera for the site only.
 
+## 2026-10-25 — Optional sign-in, and a new home page
+
+**Optional sign-in with GitHub and Google (the plan's D-19 said "no accounts").** The owner asked for a login page. It is built so the product promise survives: signing in is **never required**, and the guest path is always the clear way on. What it adds is a name: the person's first name in the header, a greeting, and a friendlier device name ("Ravi's iPhone") for the other device to see.
+- **Nothing is stored on the server.** No database, no user table. After the provider confirms who you are, the server puts a name and the provider in a signed cookie (HMAC-SHA-256, 30 days) and forgets you. The email, picture and provider's id are never read, let alone kept. Sign out deletes the cookie.
+- **The standard flow, done carefully:** authorization code with `state` and PKCE (S256), a short-lived signed "pending sign-in" cookie, the provider's secret used only on the server, `HttpOnly`, `Secure`, `SameSite=Lax` and `__Host-` cookies, a cleaned display name (control and bidirectional characters removed), and a sign-out that refuses other sites. A changed, expired or foreign cookie is simply "signed out".
+- **Off until configured.** Each provider appears only if its client ID and secret are set, and the whole feature needs a strong `SESSION_SECRET`. Until then the site shows no Sign in link at all, so there is no dead button.
+- **One Worker request per page visit** for the sign-in state (`/auth/me` answers both "who" and "which providers"), so it stays well inside the free plan's 100,000 requests a day. The service worker never caches `/auth/*`.
+- **Privacy page updated:** no account is needed; if you choose to sign in, one cookie keeps your name and provider; the server stores nothing about you. The plan's "no cookies" rule now reads "no cookies unless you choose to sign in".
+- **Tested** with a fake GitHub and Google that run only on the local test server (31 Worker tests and 5 browser tests); the real providers are connected by the owner (see `docs/security-review.md`).
+
+**Known limitations is no longer a page of its own.** It left the footer; the same eight points now sit under "Good to know" on the Help page, where people look when something doesn't work. The plan's requirement to publish them is met.
+
+**New home page:** a hero with an animated picture of a laptop handing files straight to a phone (locked in between), the main actions, three reasons to trust it, three steps, the platforms and a closing call to action; sections rise in as they scroll into view. All motion stops for people who ask for reduced motion.
+
 ## 2026-10-25 — Per-IP limits raised from 20 / 60 to 100 / 300
 
 The plan's §5.4 set at most 20 new codes and 60 join attempts per client address every 10 minutes. Repeated testing from one network, and several people sharing one Wi-Fi or a campus network (which count as one address), hit that too easily. The owner asked for it to be raised; it is now **100 codes and 300 join attempts per 10 minutes**, with everything else about the Limiter unchanged (sliding window, IPv6 per /64, nothing stored but attempt times).

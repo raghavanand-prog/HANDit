@@ -51,6 +51,13 @@ for (const view of views) {
       ]) {
         await sender.goto(path);
         await expect(sender.locator("h1")).toBeVisible();
+        // Scroll through, so sections that rise in as they appear have settled.
+        await sender.evaluate(async () => {
+          for (let y = 0; y < document.body.scrollHeight; y += 500) {
+            window.scrollTo(0, y);
+            await new Promise((r) => setTimeout(r, 60));
+          }
+        });
         await check(sender, `${tag} ${path}`);
       }
 

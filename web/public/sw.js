@@ -5,7 +5,7 @@
 //    It never caches a WebSocket, a POST, another origin, or anything a transfer touches.
 // 2. Receives files shared into the installed app (Android's Share menu): it hands them to the
 //    Send page through a temporary cache entry that the page deletes as soon as it has the files.
-const SHELL = "handit-shell-v1";
+const SHELL = "handit-shell-v2";
 const SHARE = "handit-share";
 
 self.addEventListener("install", () => self.skipWaiting());
@@ -31,6 +31,8 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  // Sign-in is never cached or touched: the browser talks to the server directly.
+  if (url.pathname.startsWith("/auth/")) return;
 
   if (request.method === "POST" && url.pathname === "/share-target") {
     event.respondWith(receiveShare(request));
