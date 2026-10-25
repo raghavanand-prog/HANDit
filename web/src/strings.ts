@@ -70,9 +70,6 @@ export const strings = {
     ],
     platformsTitle: "Works on everything you own.",
     platforms: ["iPhone", "Android", "Windows", "Mac", "Linux", "Chromebook"],
-    ctaTitle: "Hand it over.",
-    ctaSend: "Start sending",
-    ctaReceive: "Start receiving",
   },
 
   send: {

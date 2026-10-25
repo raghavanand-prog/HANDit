@@ -130,25 +130,6 @@ export function Home() {
           </ul>
         </Reveal>
       </section>
-
-      <section aria-labelledby="cta" className="bg-alt px-4 py-28 text-center sm:py-40">
-        <Reveal>
-          <h2
-            id="cta"
-            className="font-display text-5xl leading-[1.05] font-semibold tracking-tighter sm:text-6xl lg:text-7xl"
-          >
-            {text.ctaTitle}
-          </h2>
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <Link href="/send" className={`${pill} bg-accent text-accent-ink hover:opacity-90`}>
-              {text.ctaSend}
-            </Link>
-            <Link href="/receive" className={`${pill} text-accent hover:bg-accent-soft`}>
-              {text.ctaReceive}
-            </Link>
-          </div>
-        </Reveal>
-      </section>
     </div>
   );
 }
