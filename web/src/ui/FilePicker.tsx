@@ -60,7 +60,7 @@ export function FilePicker({
         }}
         onDragLeave={() => setOver(false)}
         onDrop={onDrop}
-        className={`rounded-3xl border-2 border-dashed p-6 transition-colors ${over ? "border-ink bg-tag/30" : "border-line bg-surface"}`}
+        className={`rounded-3xl border-2 border-dashed p-6 transition-colors ${over ? "border-accent bg-accent-soft" : "border-line bg-surface"}`}
       >
         <p className="font-display text-xl font-semibold">{strings.send.dropTitle}</p>
         <p className="mt-1 text-sm text-muted">{strings.send.dropHint}</p>

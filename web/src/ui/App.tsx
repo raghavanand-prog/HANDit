@@ -146,33 +146,38 @@ export function App({ joinLink: openedWith }: { joinLink: LinkResult | null }) {
       )}
       <div aria-hidden="true" className="backdrop" />
       <div className="flex min-h-dvh flex-col">
-        <header className={`mx-auto flex w-full items-center justify-between px-4 pt-5 ${width}`}>
-          <Link
-            href="/"
-            className="-ml-2 inline-flex min-h-11 min-w-11 items-center px-2 font-display text-2xl font-extrabold tracking-tight"
-          >
-            HAND<span className="rounded-md bg-tag px-1.5 text-tag-ink">it</span>
-          </Link>
-          <div className="flex items-center gap-1">
-            <Account />
+        <header className="sticky top-0 z-30 border-b border-line/60 bg-paper/80 backdrop-blur-xl backdrop-saturate-150">
+          <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4">
             <Link
-              href="/settings"
-              aria-label={strings.nav.settings}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-muted hover:bg-accent-soft hover:text-ink"
+              href="/"
+              className="-ml-2 inline-flex min-h-11 min-w-11 items-center px-2 font-display text-2xl font-semibold tracking-tight"
             >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="h-6 w-6 fill-none stroke-current stroke-2"
-              >
-                <path d="M4 7h10M18 7h2M4 17h4M12 17h8" strokeLinecap="round" />
-                <circle cx="16" cy="7" r="2" />
-                <circle cx="10" cy="17" r="2" />
-              </svg>
+              HAND<span className="text-accent">it</span>
             </Link>
+            <div className="flex items-center gap-1">
+              <Account />
+              <Link
+                href="/settings"
+                aria-label={strings.nav.settings}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-muted hover:bg-accent-soft hover:text-ink"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="h-6 w-6 fill-none stroke-current stroke-2"
+                >
+                  <path d="M4 7h10M18 7h2M4 17h4M12 17h8" strokeLinecap="round" />
+                  <circle cx="16" cy="7" r="2" />
+                  <circle cx="10" cy="17" r="2" />
+                </svg>
+              </Link>
+            </div>
           </div>
         </header>
-        <main id="main" className={`mx-auto w-full flex-1 px-4 py-8 sm:py-12 ${width}`}>
+        <main
+          id="main"
+          className={`mx-auto w-full flex-1 ${path === "/" ? "" : `px-4 py-10 sm:py-14 ${width}`}`}
+        >
           <Boundary key={path}>
             <Page
               path={path}

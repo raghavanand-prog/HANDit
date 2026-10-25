@@ -68,7 +68,7 @@ export function HandoffScene() {
       role="img"
       aria-label={strings.home.sceneLabel}
       viewBox="0 0 480 330"
-      className="mx-auto h-auto w-full max-w-lg"
+      className="mx-auto h-auto w-full"
     >
       <defs>
         <linearGradient id={gradient} x1="0" x2="1">

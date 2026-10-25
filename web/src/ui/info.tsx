@@ -18,7 +18,7 @@ export function HowItWorks() {
           <li key={title} className="flex gap-4">
             <span
               aria-hidden="true"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-tag font-display font-bold text-tag-ink"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink font-display font-semibold text-paper"
             >
               {n + 1}
             </span>

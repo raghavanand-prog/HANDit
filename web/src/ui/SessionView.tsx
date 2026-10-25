@@ -488,11 +488,11 @@ function Route({ state }: { state: SessionState }) {
 
 function Badge({ allOk, ok, total }: { allOk: boolean; ok: number; total: number }) {
   return allOk ? (
-    <p className="stamp inline-block -rotate-1 rounded-2xl border-4 border-verified bg-verified-soft px-4 py-3 font-display text-xl font-bold text-balance text-verified sm:px-5 sm:text-2xl">
+    <p className="stamp inline-flex items-center rounded-full bg-verified-soft px-5 py-2.5 font-display text-lg font-semibold text-balance text-verified">
       {strings.complete.badge}
     </p>
   ) : (
-    <p className="inline-block rounded-2xl border-4 border-warn px-5 py-3 font-display text-xl font-bold text-warn">
+    <p className="inline-flex items-center rounded-full border border-warn px-5 py-2.5 font-display text-lg font-semibold text-warn">
       {strings.complete.partial(ok, total, total - ok)}
     </p>
   );

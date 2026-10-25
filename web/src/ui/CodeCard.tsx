@@ -42,13 +42,8 @@ export function CodeCard({
 
   return (
     <div className="space-y-6">
-      <figure className="relative mx-auto max-w-sm -rotate-1 rounded-[2rem] bg-tag p-5 pt-11 text-tag-ink shadow-[0_18px_40px_-24px_rgba(23,32,51,0.55)] motion-reduce:rotate-0">
-        {/* The tag's punched hole. */}
-        <span
-          aria-hidden="true"
-          className="absolute top-4 left-1/2 h-4 w-4 -translate-x-1/2 rounded-full bg-paper ring-2 ring-tag-ink/25"
-        />
-        <div className="overflow-hidden rounded-2xl bg-white p-1">
+      <figure className="relative mx-auto max-w-sm rounded-[2rem] bg-tag p-6 text-tag-ink shadow-[0_30px_60px_-30px_rgba(0,0,0,0.55)]">
+        <div className="overflow-hidden rounded-3xl bg-white p-1.5">
           <QrCode text={link} />
         </div>
         <figcaption className="mt-4 text-center">
@@ -57,7 +52,7 @@ export function CodeCard({
             <span>{strings.code.worksOnce}</span>
             <span aria-hidden="true">·</span>
             <span
-              className={`tabular-nums ${urgent ? "rounded-md bg-tag-ink px-1.5 font-bold text-tag" : ""}`}
+              className={`tabular-nums ${urgent ? "rounded-md bg-tag-ink px-1.5 font-semibold text-tag" : ""}`}
               data-testid="countdown"
             >
               {strings.code.expiresIn(formatCountdown(left))}
