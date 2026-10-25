@@ -58,6 +58,7 @@ for (const view of views) {
             await new Promise((r) => setTimeout(r, 60));
           }
         });
+        await sender.waitForTimeout(1000); // the last section finishes rising in
         await check(sender, `${tag} ${path}`);
       }
 

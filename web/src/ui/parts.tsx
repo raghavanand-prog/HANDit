@@ -7,9 +7,9 @@ type Variant = "primary" | "secondary" | "quiet" | "danger";
 
 const variants: Record<Variant, string> = {
   primary: "bg-accent text-accent-ink hover:opacity-90",
-  secondary: "border-2 border-ink text-ink hover:bg-accent-soft",
+  secondary: "border border-ink text-ink hover:bg-accent-soft",
   quiet: "text-ink underline underline-offset-4 decoration-line hover:decoration-ink",
-  danger: "border-2 border-danger text-danger hover:bg-danger-soft",
+  danger: "border border-danger text-danger hover:bg-danger-soft",
 };
 
 export function Button({
@@ -19,11 +19,11 @@ export function Button({
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: "md" | "lg" }) {
   const sizing =
-    variant === "quiet" ? "px-1 py-2" : size === "lg" ? "px-6 py-5 text-xl" : "px-5 py-3 text-base";
+    variant === "quiet" ? "px-1 py-2" : size === "lg" ? "px-8 py-4 text-lg" : "px-6 py-3 text-base";
   return (
     <button
       type="button"
-      className={`inline-flex items-center justify-center gap-2 rounded-2xl min-h-12 font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${variants[variant]} ${sizing} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-full min-h-12 font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${variants[variant]} ${sizing} ${className}`}
       {...props}
     />
   );
@@ -33,7 +33,7 @@ export function Title({ children }: { children: ReactNode }) {
   return (
     <h1
       tabIndex={-1}
-      className="font-display text-3xl leading-tight font-bold tracking-tight outline-none sm:text-4xl"
+      className="font-display text-3xl leading-tight font-semibold tracking-tight outline-none sm:text-5xl"
     >
       {children}
     </h1>

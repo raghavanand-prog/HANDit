@@ -91,7 +91,7 @@ export function ScanPage({ onLink }: { onLink: (result: LinkResult) => void }) {
         {status === "scanning" && (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute inset-[12%] rounded-3xl border-4 border-tag/90"
+            className="pointer-events-none absolute inset-[12%] rounded-3xl border-2 border-white/90"
           />
         )}
         {status === "starting" && (

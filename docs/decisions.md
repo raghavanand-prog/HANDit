@@ -44,6 +44,10 @@ The frames are drawn on a canvas the way a camera delivers them, in each engine.
 
 **Scanner rules:** only a link from this site's own origin and path `/j` is accepted; anything else (a Wi-Fi code, another site's link) is ignored and scanning continues. The camera is stopped as soon as a code is read, and no video leaves the page. The Permissions-Policy allows the camera for the site only.
 
+## 2026-10-25 — A flatter, quieter look
+
+The interface moved to a minimal, Apple-like visual language at the owner's request: near-monochrome (graphite on white, white on black in the dark theme), the system's own type at large sizes with tight spacing, flat backgrounds with no gradients, pill buttons, one blue (a deeper shade in the light theme so link text stays above 4.5:1 on the grey bands) used only for actions and links, and a sticky translucent header. The marigold tag colour is retired from the interface (the code is now a graphite card), as are the tinted pills, icon tiles and boxed cards. The home page is one big statement per band on alternating white and light-grey, with the hand-off animation under the headline. No change to behaviour; all accessibility checks pass in both themes.
+
 ## 2026-10-25 — Optional sign-in, and a new home page
 
 **Optional sign-in with GitHub and Google (the plan's D-19 said "no accounts").** The owner asked for a login page. It is built so the product promise survives: signing in is **never required**, and the guest path is always the clear way on. What it adds is a name: the person's first name in the header, a greeting, and a friendlier device name ("Ravi's iPhone") for the other device to see.

@@ -28,7 +28,7 @@ export const strings = {
   home: {
     badge: "Free · Nothing to install · No account needed",
     headline: "Hand your files to any device.",
-    lead: "Send photos, videos and files between any phone or computer. Scan a code, tap accept, done. Original quality, never compressed, never uploaded.",
+    lead: "Photos, videos and files between any phone or computer. Scan a code, tap accept. Original quality, never uploaded.",
     send: "Send files",
     sendHint: "Pick files, then show a code for the other device to scan.",
     receive: "Receive files",
@@ -41,19 +41,19 @@ export const strings = {
     whyTitle: "Made to be trusted",
     why: [
       {
-        title: "Original quality, proven",
+        title: "Original quality. Proven.",
         text: "Nothing is compressed, resized or converted. Every file is fingerprinted on both devices, and the badge appears only when every one matches.",
       },
       {
-        title: "Straight between devices",
+        title: "Straight from one to the other.",
         text: "Files travel directly from one browser to the other, encrypted. HANDit's server only makes the introduction and can't read it.",
       },
       {
-        title: "Nothing to install",
+        title: "Nothing to install.",
         text: "It's a web page. Open it on an iPhone, an Android phone, Windows, Mac, Linux or a Chromebook, with no app and no sign-up.",
       },
     ],
-    stepsTitle: "Three steps",
+    stepsTitle: "Three steps. That's it.",
     steps: [
       {
         title: "Show a code",
@@ -68,9 +68,9 @@ export const strings = {
         text: "The other person sees what's coming and taps Accept. The files arrive identical, and HANDit proves it.",
       },
     ],
-    platformsTitle: "Works wherever your files are",
+    platformsTitle: "Works on everything you own.",
     platforms: ["iPhone", "Android", "Windows", "Mac", "Linux", "Chromebook"],
-    ctaTitle: "Ready when you are.",
+    ctaTitle: "Hand it over.",
     ctaSend: "Start sending",
     ctaReceive: "Start receiving",
   },

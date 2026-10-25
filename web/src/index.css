@@ -1,44 +1,46 @@
 @import "tailwindcss";
 
-/* HANDit's palette: ink on cool paper, with a marigold hand-off tag for the code. */
+/* HANDit's palette: graphite on white (white on black in the dark), and one blue used only for actions. */
 :root {
-  --ink: #172033;
-  --paper: #f4f6f9;
-  --surface: #ffffff;
-  --line: #dfe3ea;
-  --muted: #5b6476;
-  --tag: #ffd447;
-  --tag-ink: #3a2c00;
-  --verified: #127a4e;
-  --verified-soft: #e3f4ec;
-  --warn: #9a4a06;
-  --danger: #b42318;
-  --danger-soft: #fdecea;
-  --accent: #2a4fd6;
+  --ink: #1d1d1f;
+  --paper: #ffffff;
+  --alt: #f5f5f7;
+  --surface: #f5f5f7;
+  --line: #d2d2d7;
+  --muted: #636366;
+  --tag: #1d1d1f;
+  --tag-ink: #ffffff;
+  --verified: #1e7b34;
+  --verified-soft: #e6f4ea;
+  --warn: #a54b00;
+  --danger: #c4001a;
+  --danger-soft: #fdecee;
+  --accent: #0066cc;
   --accent-ink: #ffffff;
-  --accent-soft: #e8edff;
-  --focus: #2a4fd6;
+  --accent-soft: #ececf1;
+  --focus: #0066cc;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --ink: #e8ecf4;
-    --paper: #0f1420;
-    --surface: #182031;
-    --line: #2b3548;
-    --muted: #9aa4b8;
-    --tag: #ffd447;
-    --tag-ink: #3a2c00;
-    --verified: #4ccf91;
-    --verified-soft: #12301f;
-    --warn: #f5b04a;
-    --danger: #ff8a7a;
-    --danger-soft: #3a1714;
-    --accent: #8ea8ff;
-    --accent-ink: #0b1020;
-    --accent-soft: #1b2650;
-    --focus: #8ea8ff;
+    --ink: #f5f5f7;
+    --paper: #000000;
+    --alt: #111113;
+    --surface: #1c1c1e;
+    --line: #3a3a3c;
+    --muted: #a1a1a6;
+    --tag: #f5f5f7;
+    --tag-ink: #000000;
+    --verified: #30d158;
+    --verified-soft: #0b2a14;
+    --warn: #ff9f0a;
+    --danger: #ff6961;
+    --danger-soft: #3a1412;
+    --accent: #2997ff;
+    --accent-ink: #000000;
+    --accent-soft: #2c2c2e;
+    --focus: #2997ff;
     color-scheme: dark;
   }
 }
@@ -57,16 +59,22 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-focus: var(--focus);
+  --color-alt: var(--alt);
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
   --font-display:
-    ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Segoe UI Variable Display",
-    system-ui, sans-serif;
+    "SF Pro Display", system-ui, -apple-system, "Segoe UI Variable Display", "Segoe UI", Roboto,
+    sans-serif;
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
 }
 
 @layer base {
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.022em;
+  }
   html {
     background: var(--paper);
     color: var(--ink);
@@ -86,11 +94,11 @@
 /* The one moment of motion: the "Identical ✓" stamp lands. */
 @keyframes stamp {
   from {
-    transform: scale(1.12) rotate(-3deg);
+    transform: scale(0.96);
     opacity: 0;
   }
   to {
-    transform: scale(1) rotate(-1deg);
+    transform: scale(1);
     opacity: 1;
   }
 }
@@ -177,28 +185,17 @@ a {
   }
 }
 
-/* A soft wash behind every page: the accent at one corner, the marigold tag at the other. */
 .backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(52rem 34rem at 8% -8%, var(--accent-soft), transparent 70%),
-    radial-gradient(
-      34rem 24rem at 100% 4%,
-      color-mix(in oklab, var(--tag) 22%, transparent),
-      transparent 70%
-    );
+  display: none;
 }
 
 /* Cards and sections rise in once as they scroll into view. */
 .reveal {
   opacity: 0;
-  transform: translateY(16px);
+  transform: translateY(28px);
   transition:
-    opacity 480ms ease-out,
-    transform 480ms cubic-bezier(0.2, 0.7, 0.2, 1);
+    opacity 700ms ease-out,
+    transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 .reveal-in {
   opacity: 1;
