@@ -168,4 +168,3 @@ Five reviews, two of them attacking a local copy, found no way to read or alter 
 - **The file type a sender claims is kept** (rule 6: never change metadata). Where a browser opens a received file instead of downloading it, a claimed `text/html` renders under the site's origin; the CSP still blocks any script.
 - **A room ID can be claimed again once its Room has ended.** Someone holding a leaked link could then meet a late guest. A tombstone would break "keeps nothing"; the alternative is for the guest to refuse a link whose expiry time has passed, which gives that advisory byte an effect.
 - The Room allows 100 frames in all. A device with many network interfaces could reach that while connecting.
-
