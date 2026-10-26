@@ -170,7 +170,15 @@ export function introduce({
     signal.onmessage = (m) => {
       queue = queue.then(() => (settled ? undefined : handle(m))).catch(fail);
     };
-    signal.onfail = fail;
+    // Both devices give up after the same time, one a moment before the other. The one that gives
+    // up leaves the Room, which closes the other's connection with "Peer left". Once the two have
+    // met, that is the connection having failed, not the server being unreachable.
+    signal.onfail = (error) =>
+      fail(
+        peer && error instanceof HanditError && error.details.includes("1000: Peer left")
+          ? new HanditError("P2P_FAILED", details())
+          : error,
+      );
 
     if (role === "guest") {
       signal.ready
