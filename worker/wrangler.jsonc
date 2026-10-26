@@ -30,6 +30,14 @@
   // Extra browser origins allowed to open a Room, for local development only (comma-separated).
   // Empty in production: only the site's own origin may connect.
   "vars": { "ALLOWED_ORIGINS": "" },
+  // A rate limit that runs before any Durable Object is touched, counted per client address (per
+  // Cloudflare location, approximately). It matches the per-IP Limiter's rates per minute: 10 new
+  // codes, 30 joins and 3 sign-in attempts. The Limiter stays as the exact backstop.
+  "ratelimits": [
+    { "name": "ROOM_FLOOD", "namespace_id": "48201", "simple": { "limit": 10, "period": 60 } },
+    { "name": "JOIN_FLOOD", "namespace_id": "48202", "simple": { "limit": 30, "period": 60 } },
+    { "name": "AUTH_FLOOD", "namespace_id": "48203", "simple": { "limit": 3, "period": 60 } }
+  ],
   // No request logs: nothing records room IDs, links or frames.
   "observability": { "enabled": false }
 }

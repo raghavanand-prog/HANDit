@@ -168,3 +168,13 @@ Five reviews, two of them attacking a local copy, found no way to read or alter 
 - **The file type a sender claims is kept** (rule 6: never change metadata). Where a browser opens a received file instead of downloading it, a claimed `text/html` renders under the site's origin; the CSP still blocks any script.
 - **A room ID can be claimed again once its Room has ended.** Someone holding a leaked link could then meet a late guest. A tombstone would break "keeps nothing"; the alternative is for the guest to refuse a link whose expiry time has passed, which gives that advisory byte an effect.
 - The Room allows 100 frames in all. A device with many network interfaces could reach that while connecting.
+
+## 2026-10-26 — A rate limit in front of the Durable Objects
+
+**Need:** the owner kept the per-IP limits at 100 codes and 300 joins per 10 minutes (see above) and wanted a Cloudflare rate limit in front of them. A request refused by the Limiter still costs a Worker request and a Limiter call, and a flood of attempts is uncapped.
+
+**Choice:** Cloudflare's Workers Rate Limiting binding, three of them, counted per client address (the /64 for IPv6) and checked before any Durable Object is touched: **10 new codes, 30 joins and 3 sign-in attempts per minute**. These are the Limiter's own rates per minute (100 per 10 minutes is 10 a minute), so the stated limits don't change; they are now also enforced as a rate. The Limiter stays as the exact backstop. Requests that are invalid (bad room id, bad role, wrong Origin) are turned away before they are counted, and the read-only `/auth/me` and `/auth/providers` calls are not counted.
+
+**Limits of it:** Cloudflare counts per location and approximately, so it is a flood shield, not an exact meter. Its periods can only be 10 or 60 seconds. It does not lower the daily ceiling for one address below what the Limiter already allows; it keeps a flood from reaching the Durable Objects at all and spreads a burst over time. It is skipped for localhost and `*.test` hosts, so the local test server and the Worker's own tests are unaffected.
+
+**Free plan:** Cloudflare's documentation does not say the binding is paid-only, and does not say it is included on the free plan either. This has not been confirmed by a deploy. If the binding is missing or fails at run time, the Worker lets the request through to the Limiter. If Cloudflare refuses the configuration when deploying, the deploy fails and the previous version stays live; remove the `ratelimits` entry from `worker/wrangler.jsonc` and deploy again.
