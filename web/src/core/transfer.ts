@@ -273,6 +273,17 @@ export class Sender extends Transfer {
       this.summary = resolve;
     });
     if (!summary) throw protocolError("no summary");
+    // The summary must name every file exactly once and nothing else. Otherwise the receiver
+    // could make this screen show a result that doesn't match what was sent.
+    const fileIndexes = new Set(this.items.filter((x) => x.kind === "file").map((x) => x.i));
+    const named = [...summary.ok, ...summary.failed.map((f) => f.i)];
+    if (
+      named.length !== fileIndexes.size ||
+      new Set(named).size !== named.length ||
+      !named.every((i) => fileIndexes.has(i))
+    ) {
+      throw protocolError("summary doesn't match the files");
+    }
     const outcomes: Record<number, FileOutcome> = {};
     for (const i of summary.ok) outcomes[i] = { ok: true };
     for (const f of summary.failed) outcomes[f.i] = { ok: false, code: f.code };
@@ -516,6 +527,12 @@ export class Receiver extends Transfer {
     this.update({ outcomes });
     this.send({ t: "summary", ok, failed });
   }
+}
+
+/** True only if there is at least one file and every one of them was verified identical. */
+export function allIdentical(t: Pick<TransferState, "items" | "outcomes">): boolean {
+  const files = t.items.filter((x) => x.kind === "file");
+  return files.length > 0 && files.every((x) => t.outcomes[x.i]?.ok === true);
 }
 
 /** The error a sender or recipient shows for a code. */

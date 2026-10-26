@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { defaultDeviceName, describeDevice, uaLabel } from "../src/core/device";
+import { cleanDeviceLabel, defaultDeviceName, describeDevice, uaLabel } from "../src/core/device";
 
 const UA = {
   iPhone:
@@ -33,4 +33,19 @@ test.each([
   const device = describeDevice(ua, touch);
   expect(uaLabel(device)).toBe(label);
   expect(defaultDeviceName(device)).toBe(name);
+});
+
+test("the other device's label is only ever a browser on a system we know", () => {
+  expect(cleanDeviceLabel("Safari on iPhone")).toBe("Safari on iPhone");
+  expect(cleanDeviceLabel("Samsung Internet on Android")).toBe("Samsung Internet on Android");
+  for (const hostile of [
+    "Send your password to evil.example",
+    "Chrome on Windows (verified)",
+    "Chrome on Windows\u202e",
+    "",
+    "Safari on",
+    `Chrome on ${"x".repeat(5000)}`,
+  ]) {
+    expect(cleanDeviceLabel(hostile)).toBe("Browser on Unknown");
+  }
 });

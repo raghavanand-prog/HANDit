@@ -225,9 +225,13 @@ interface Session {
 }
 
 /** Handles /auth/*. Returns null for any other path. */
-export async function handleAuth(request: Request, env: AuthEnv): Promise<Response | null> {
+export async function handleAuth(request: Request, realEnv: AuthEnv): Promise<Response | null> {
   const url = new URL(request.url);
   if (!url.pathname.startsWith("/auth/")) return null;
+  // The fake provider's address is for the local test server only. Anywhere else the setting is
+  // ignored, so it can never send the client secret to another host.
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  const env: AuthEnv = local ? realEnv : { ...realEnv, OAUTH_BASE_URL: undefined };
   const parts = url.pathname.split("/").filter(Boolean); // ["auth", ...]
   const secret = env.SESSION_SECRET ?? "";
 

@@ -113,6 +113,7 @@ describe("close codes", () => {
     const { socket, failures } = await setUp();
     socket.open();
     socket.serverClose(code, "Too many attempts");
+    await flush();
     expect(failures.map((f) => f.code)).toEqual([expected]);
   });
 
@@ -120,6 +121,7 @@ describe("close codes", () => {
     const { socket, failures } = await setUp();
     socket.open();
     socket.serverClose(4429, "Too many attempts");
+    await flush();
     expect(failures[0]?.details).toContain("Too many attempts");
   });
 
@@ -136,5 +138,34 @@ describe("close codes", () => {
     signal.close();
     expect(socket.closedWith).toBe(1000);
     expect(failures).toEqual([]);
+  });
+});
+
+describe("frames that arrive just before the Room closes (S5)", () => {
+  test("they are delivered before the close is reported", async () => {
+    const { socket, ownerSeal, received, failures } = await setUp();
+    socket.open();
+    const order: string[] = [];
+    // The page sees frames and the failure in the order they happened.
+    const frames = [
+      await ownerSeal.seal({ t: "sdp", type: "offer", sdp: "v=0" }),
+      await ownerSeal.seal({ t: "bye" }),
+    ];
+    for (const frame of frames) socket.receive(frame);
+    socket.serverClose(1000, "Peer left"); // right behind them, before they were opened
+    await flush();
+    order.push(...received.map((m) => m.t), ...failures.map((e) => e.code));
+    expect(order).toEqual(["sdp", "bye", "PEER_LEFT"]);
+    expect(failures[0]?.details).toContain("1000: Peer left");
+  });
+
+  test("a tampered frame still ends the session as tampered, not as a close", async () => {
+    const { socket, ownerSeal, failures } = await setUp();
+    socket.open();
+    const frame = await ownerSeal.seal(hello);
+    socket.receive(`${frame.slice(0, -4)}AAA}`);
+    socket.serverClose(1000, "Peer left");
+    await flush();
+    expect(failures.map((e) => e.code)).toEqual(["INTRO_TAMPERED"]);
   });
 });

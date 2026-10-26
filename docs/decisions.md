@@ -139,3 +139,33 @@ The protocol fixes what the link and sealed frames contain but leaves a few byte
 - **"Couldn't connect directly" is shown on both sides.** Both devices give up after the same time, the guest a moment earlier; the one that gives up leaves the Room, which closes the other's connection with "Peer left". That was shown as "can't reach the server" on whichever side lost the race, and made one end-to-end test fail about 1 run in 6 on slow machines. Once the two have met, "Peer left" now counts as a failed connection.
 
 **Not changed, on purpose:** the file type the sender claims is still kept (rule 6 says never change metadata), and a room ID can still be claimed again after its Room has ended (a fix would keep a short-lived record, which §6 forbids). Both are open decisions for the owner.
+
+## 2026-10-26 — Second review: attacks tried against the code and the running app
+
+Five reviews, two of them attacking a local copy, found no way to read or alter the sealed introduction, to save an unverified file, or to write outside the transfer. What they did find is fixed here; none of it changes the protocol (§5) or weakens a rule in §6.
+
+**A hostile sender**
+- **The page could be frozen before anything was shown.** Renaming repeated file names rescanned from "(1)" every time, so 10,000 files called `a.txt` took about 10 seconds and 3,000 long names about 100. Numbering now resumes where it stopped.
+- **The offer was unbounded in memory.** A media type could be 60 KB per item. A type is now at most 127 printable ASCII characters, and all paths and types of one offer together at most 8 MiB.
+- **An offer with no files showed "Identical ✓".** The badge now needs at least one file, and every file verified (`allIdentical`).
+- **The sender no longer takes the receiver's summary on trust.** It must name every file exactly once and nothing else.
+- **Names.** Two names are compared the way macOS and Windows compare them (the long s and S, the sharp s and SS), lone surrogates are replaced, and `.invoice.exe` is recognised as an app. Many more types get the app warning (HTML, SVG, macro Office files, RDP, disk images and others). A long name is cut in the middle so its extension always shows, and "N photos" no longer counts a file that is an app by its name.
+
+**The page**
+- **The link's secret stayed in the address bar and history** when the link was opened in a tab already showing the app, or with `/J`, `/j/`. Now any link-sized fragment is read and removed, whatever the path, and when the fragment changes in an open page. Leaving the join screen forgets the secret, so Back doesn't join again. The browser's Back and Forward buttons now ask first during a transfer, like the in-page links do.
+- **Connection details from the other device are checked** before the browser sees them: a data section only (no audio or video), and exactly one SHA-256 fingerprint. ICE candidates are not filtered: dropping loopback or link-local addresses could break connections on the same network, and a peer that holds the secret can already make the browser contact any address it likes.
+- **A frame arriving just before the Room closed could be lost.** The last frames (the other device's "bye", its final connection details) were dropped when the close was handled first. Frames are now opened in order and a close is reported after them, and "Peer left" after a "bye" no longer ends a connection that is about to open.
+- **Allow and Accept** ignore clicks for the first 0.4 seconds on screen, so a click meant for the screen before can't land on them.
+- **The other device's text:** its browser label is only ever a known browser on a known system, and stacked accents are cut to two per letter.
+
+**The Worker**
+- **The test settings do nothing on the live site.** `OAUTH_BASE_URL` (which would send the sign-in secret to another host) and `LIMIT_MULTIPLIER` (which lifts the limits up to 1,000 times) are honoured only for requests to localhost.
+- **IPv6 is counted per /48 as well as per /64.** An ISP can give one customer a /48 (65,536 /64s) and each /64 had its own count. The /48 gets ten times a /64's limits; IPv4 is unchanged and costs no extra call.
+- The Worker's own replies are never cached (`Cache-Control: no-store`), and `X-Frame-Options: DENY` is sent next to `frame-ancestors 'none'` for old browsers.
+
+**Left as they are, for the owner to decide**
+- **The per-IP limits (100 codes and 300 joins per 10 minutes).** One IPv4 address can reach roughly 14,000 new rooms a day. At about six storage writes each that is near the free plan's 100,000 daily writes, so one address could block everyone until midnight UTC. The request count was weighed when the limit was raised; the writes were not.
+- **The file type a sender claims is kept** (rule 6: never change metadata). Where a browser opens a received file instead of downloading it, a claimed `text/html` renders under the site's origin; the CSP still blocks any script.
+- **A room ID can be claimed again once its Room has ended.** Someone holding a leaked link could then meet a late guest. A tombstone would break "keeps nothing"; the alternative is for the guest to refuse a link whose expiry time has passed, which gives that advisory byte an effect.
+- The Room allows 100 frames in all. A device with many network interfaces could reach that while connecting.
+

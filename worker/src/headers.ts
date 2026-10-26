@@ -21,6 +21,7 @@ export const SECURITY_HEADERS: Record<string, string> = {
   "Content-Security-Policy": CSP,
   "Referrer-Policy": "no-referrer",
   "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
   "Cross-Origin-Opener-Policy": "same-origin",
   "Cross-Origin-Resource-Policy": "same-origin",
   "Permissions-Policy": "camera=(self), microphone=(), geolocation=(), payment=(), usb=()",
@@ -29,5 +30,8 @@ export const SECURITY_HEADERS: Record<string, string> = {
 
 /** A plain-text response with the security headers. */
 export function reply(body: string, status: number): Response {
-  return new Response(body, { status, headers: SECURITY_HEADERS });
+  return new Response(body, {
+    status,
+    headers: { ...SECURITY_HEADERS, "Cache-Control": "no-store" },
+  });
 }

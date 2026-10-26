@@ -1,6 +1,6 @@
 import { type AuthEnv, handleAuth } from "./auth";
 import { reply } from "./headers";
-import { clientKey } from "./limiter";
+import { clientKey, WIDE_SCALE, wideKey } from "./limiter";
 import { Close, parseJoin, refuse } from "./room";
 
 export { Limiter } from "./limiter";
@@ -24,13 +24,23 @@ export function originAllowed(request: Request, url: URL, env: Env): boolean {
   return extra.includes(origin);
 }
 
+/** Only the local test server is "local": the test-only settings do nothing anywhere else. */
+const isLocal = (url: URL) => ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+
+/** Counts an attempt for this client's /64 (or IPv4 address) and, for IPv6, its whole /48. */
+async function allowed(request: Request, env: Env, kind: "room" | "join" | "auth", local: boolean) {
+  if (!(await env.LIMITER.getByName(clientKey(request)).allow(kind, local))) return false;
+  const wide = wideKey(request);
+  return wide === null || (await env.LIMITER.getByName(wide).allow(kind, local, WIDE_SCALE));
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const local = isLocal(url);
     // Optional sign-in (/auth/*): nothing here is needed to send or receive files.
     if (SIGN_IN_PATH.test(url.pathname)) {
-      const limiter = env.LIMITER.getByName(clientKey(request));
-      if (!(await limiter.allow("auth"))) return reply("Too many attempts", 429);
+      if (!(await allowed(request, env, "auth", local))) return reply("Too many attempts", 429);
     }
     const auth = await handleAuth(request, env as unknown as AuthEnv);
     if (auth) return auth;
@@ -46,8 +56,7 @@ export default {
     const join = parseJoin(url);
     if (!join) return reply("Bad request", 400);
 
-    const limiter = env.LIMITER.getByName(clientKey(request));
-    if (!(await limiter.allow(join.role === "owner" ? "room" : "join"))) {
+    if (!(await allowed(request, env, join.role === "owner" ? "room" : "join", local))) {
       return refuse(Close.TOO_MANY, "Too many attempts");
     }
     return env.ROOM.getByName(roomId).fetch(request);

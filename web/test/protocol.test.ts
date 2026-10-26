@@ -122,3 +122,64 @@ describe("splitOffer and OfferAssembler", () => {
     ).toThrow();
   });
 });
+
+describe("what a sender may put in an offer is bounded (S7)", () => {
+  const withType = (type: string) =>
+    parseControl(
+      JSON.stringify({
+        t: "offer_items",
+        id: ID,
+        items: [{ i: 0, path: "a", size: 1, kind: "file", type }],
+      }),
+    );
+
+  test.each(["", "image/heic", "video/quicktime", "text/plain; charset=utf-8"])(
+    "the type %j is accepted",
+    (type) => {
+      expect(withType(type)).not.toBeNull();
+    },
+  );
+
+  test.each([
+    ["longer than 127 characters", `image/${"x".repeat(200)}`],
+    ["with a control character", "image/png\u0000"],
+    ["with a newline", "image/png\n"],
+    ["with non-ASCII text", "image/\u202epng"],
+    ["with an emoji", "image/\u{1F600}"],
+  ])("a type %s is refused", (_, type) => {
+    expect(withType(type)).toBeNull();
+  });
+
+  test("an offer whose paths add up to more than 8 MiB is refused before Accept", () => {
+    const longPath = (i: number) => `${"d".repeat(4000)}${i}`;
+    const items = Array.from({ length: 2200 }, (_, i) => item(i, longPath(i), 1));
+    const parts = splitOffer(ID, items);
+    const assembler = new OfferAssembler({
+      t: "offer",
+      id: ID,
+      files: items.length,
+      bytes: items.length,
+      parts: parts.length,
+    });
+    expect(() => {
+      for (const part of parts) assembler.add(part);
+    }).toThrow(/too large/);
+  });
+
+  test("a large honest offer is still fine: 10,000 files with 200-byte paths", () => {
+    const items = Array.from({ length: MAX_ITEMS }, (_, i) =>
+      item(i, `Holiday/${"n".repeat(180)}-${i}.jpg`, 1),
+    );
+    const parts = splitOffer(ID, items);
+    const assembler = new OfferAssembler({
+      t: "offer",
+      id: ID,
+      files: MAX_ITEMS,
+      bytes: MAX_ITEMS,
+      parts: parts.length,
+    });
+    let result: OfferItem[] | null = null;
+    for (const part of parts) result = assembler.add(part);
+    expect(result).toHaveLength(MAX_ITEMS);
+  });
+});

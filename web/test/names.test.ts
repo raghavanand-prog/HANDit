@@ -317,7 +317,85 @@ describe("text from the other device is cleaned before it is shown (S4)", () => 
     expect([...emoji]).toHaveLength(40);
     expect(emoji).not.toContain("\ufffd");
   });
+  test("stacked combining marks can't make a name unreadable", () => {
+    const zalgo = `Z${"\u0301\u0302\u0303\u0304\u0305\u0306".repeat(6)}`;
+    const out = cleanPeerText(zalgo, 40);
+    expect([...out.normalize("NFD")].filter((c) => /\p{M}/u.test(c)).length).toBeLessThanOrEqual(3); // one accent is folded into the letter itself
+    expect(out.normalize("NFD").startsWith("Z")).toBe(true);
+    expect(cleanPeerText("Ravi\u0301", 40)).toBe("Rav\u00ed"); // ordinary accents are kept
+  });
   test("nothing left means an empty string, for the caller to replace", () => {
     expect(cleanPeerText("\u200b\u202e \u0000", 40)).toBe("");
+  });
+});
+
+describe("hostile lists can't freeze the page (S7)", () => {
+  const many = (n: number, path: (i: number) => string): OfferItem[] =>
+    Array.from({ length: n }, (_, i) => ({ i, path: path(i), size: 1, kind: "file", type: "" }));
+
+  test("10,000 files with the same name are made safe in well under a second", () => {
+    const start = performance.now();
+    const out = makeSafe(many(10_000, () => "a.txt"));
+    expect(performance.now() - start).toBeLessThan(1500);
+    expect(new Set(out.map((x) => x.path.toLowerCase())).size).toBe(10_000);
+    expect(out[0]?.path).toBe("a.txt");
+    expect(out[1]?.path).toBe("a (1).txt");
+    expect(out[9999]?.path).toBe("a (9999).txt");
+  });
+
+  test("3,000 long names that collide are fast too", () => {
+    const start = performance.now();
+    const out = makeSafe(many(3000, () => `${"é".repeat(150)}.txt`));
+    expect(performance.now() - start).toBeLessThan(1500);
+    expect(new Set(out.map((x) => x.path.toLowerCase())).size).toBe(3000);
+    for (const x of out) expect(utf8Length(x.path)).toBeLessThanOrEqual(255);
+  });
+
+  test("a name that already looks like a renamed one doesn't clash", () => {
+    const out = makeSafe(many(3, (i) => ["a.txt", "a (1).txt", "a.txt"][i] as string));
+    expect(out.map((x) => x.path)).toEqual(["a.txt", "a (1).txt", "a (2).txt"]);
+  });
+});
+
+describe("names that a file system treats as the same are renamed (S4)", () => {
+  // Case folding on macOS and Windows goes beyond toLowerCase: the long s and the sharp s.
+  test.each([
+    ["\u017f.txt", "S.txt"],
+    ["\u00df.txt", "SS.txt"],
+    ["\u00df.txt", "ss.txt"],
+    ["\u0131.txt", "I.txt"],
+    ["K.txt", "\u212a.txt"], // the Kelvin sign
+  ])("%j and %j end up with different names", (a, b) => {
+    const [x, y] = safePaths(a, b);
+    expect(x?.toUpperCase().toLowerCase()).not.toBe(y?.toUpperCase().toLowerCase());
+  });
+
+  test("a lone surrogate can't reach a file system", () => {
+    const out = safeComponent("a\ud800b.txt");
+    expect(out).toBe("a\ufffdb.txt");
+    expect(/\p{Surrogate}/u.test(out)).toBe(false);
+    const paths = safePaths("\ud800.txt", "\udc00.txt");
+    expect(new Set(paths).size).toBe(2);
+  });
+});
+
+describe("risky types are found whatever the name looks like (S4)", () => {
+  test.each([
+    [".invoice.exe", "app"],
+    [".a.b.exe", "disguised"],
+    ["page.html", "app"],
+    ["picture.svg", "app"],
+    ["macro.docm", "app"],
+    ["sheet.xlsm", "app"],
+    ["connect.rdp", "app"],
+    ["disk.vhdx", "app"],
+    ["help.chm", "app"],
+    ["package.appx", "app"],
+    ["a.pdf.html", "disguised"],
+    [".exe", null],
+    [".bashrc", null],
+    ["notes.txt", null],
+  ])("%s → %s", (name, expected) => {
+    expect(riskOf(name)).toBe(expected);
   });
 });

@@ -20,9 +20,10 @@ const RESERVED_NAMES =
   /^(con|prn|aux|nul|conin\$|conout\$|com[1-9\u00b9\u00b2\u00b3]|lpt[1-9\u00b9\u00b2\u00b3]) *(\.|$)/i;
 const RISKY = new Set(
   `exe msi bat cmd ps1 vbs js scr com lnk msix apk app pkg dmg command sh jar
-   hta reg msc pif scf url wsf wsh vbe jse dll iso appimage desktop deb rpm jnlp py pl rb`.split(
-    /\s+/,
-  ),
+   hta reg msc pif scf url wsf wsh vbe jse dll iso appimage desktop deb rpm jnlp py pl rb
+   html htm xhtml shtml svg mht mhtml chm cpl theme library-ms search-ms rdp docm xlsm pptm xll
+   ps1xml psm1 inf ocx sys vhd vhdx img cab appx appxbundle application terminal workflow
+   webloc inetloc xbap gadget bin run bash ws vb`.split(/\s+/),
 );
 
 const encoder = new TextEncoder();
@@ -34,15 +35,29 @@ function splitExtension(name: string): [string, string] {
   return dot > 0 ? [name.slice(0, dot), name.slice(dot)] : [name, ""];
 }
 
+/** UTF-8 length of one character (a code point). */
+const charBytes = (ch: string) => {
+  const c = ch.codePointAt(0) ?? 0;
+  return c < 0x80 ? 1 : c < 0x800 ? 2 : c < 0x10000 ? 3 : 4;
+};
+
 /** Cuts a string to at most `max` UTF-8 bytes, on a character boundary. */
 function cut(text: string, max: number): string {
   let out = "";
+  let used = 0;
   for (const ch of text) {
-    if (bytes(out + ch) > max) break;
+    used += charBytes(ch);
+    if (used > max) break;
     out += ch;
   }
   return out;
 }
+
+/**
+ * The key two names are compared by. macOS and Windows fold case beyond toLowerCase (the long s
+ * and "S", the sharp s and "SS"), so folding up and down catches what they would treat as one.
+ */
+const fold = (name: string) => name.toUpperCase().toLowerCase();
 
 /** Fits a name within 255 bytes, cutting before the extension. */
 export function fitName(base: string, extension: string): string {
@@ -54,7 +69,12 @@ export function fitName(base: string, extension: string): string {
 /** Rules 1 and 3–8 for one path component (rule 2 is checked on the whole path). */
 export function safeComponent(raw: string): string {
   // Invisible characters go before normalising, so what is left can't be a non-NFC sequence.
-  let name = raw.replace(CONTROL, "_").replace(INVISIBLE, "").normalize("NFC");
+  // A lone surrogate can't be written to a file system; it would also make ZIP names collide.
+  let name = raw
+    .replace(/\p{Surrogate}/gu, "\ufffd")
+    .replace(CONTROL, "_")
+    .replace(INVISIBLE, "")
+    .normalize("NFC");
   name = name.replace(RESERVED_CHARS, "_");
   name = name.replace(/^ +/, "").replace(/[ .]+$/, "");
   if (!name) return "_";
@@ -80,15 +100,27 @@ function checkPath(path: string) {
 export function makeSafe(items: OfferItem[]): OfferItem[] {
   for (const item of items) checkPath(item.path);
   const folders = new Map<string, string>(); // raw folder path → safe folder path
-  const taken = new Map<string, Set<string>>(); // safe folder path → names in use (lower case)
+  const taken = new Map<string, Set<string>>(); // safe folder path → names in use (folded)
+  // Where to resume numbering for a wanted name, so each repeat costs one step, not a rescan.
+  const resume = new Map<string, Map<string, number>>();
 
   const claim = (parent: string, wanted: string, isFolder: boolean) => {
     const used = taken.get(parent) ?? new Set<string>();
     taken.set(parent, used);
+    const next = resume.get(parent) ?? new Map<string, number>();
+    resume.set(parent, next);
     const [base, extension] = isFolder ? [wanted, ""] : splitExtension(wanted);
     let name = wanted;
-    for (let n = 1; used.has(name.toLowerCase()); n++) name = fitName(base, ` (${n})${extension}`);
-    used.add(name.toLowerCase());
+    if (used.has(fold(name))) {
+      const key = fold(wanted);
+      let n = next.get(key) ?? 1;
+      for (; ; n++) {
+        name = fitName(base, ` (${n})${extension}`);
+        if (!used.has(fold(name))) break;
+      }
+      next.set(key, n + 1);
+    }
+    used.add(fold(name));
     return parent ? `${parent}/${name}` : name;
   };
   const folder = (raw: string): string => {
@@ -117,7 +149,8 @@ export function withNumber(name: string, n: number): string {
 
 /** Rule 10: "app" for apps, installers and scripts; "disguised" for names like invoice.pdf.exe. */
 export function riskOf(name: string): "app" | "disguised" | null {
-  const parts = name.toLowerCase().split(".");
+  // ".invoice.exe" is a file called "invoice" with the extension .exe, hidden from a plain listing.
+  const parts = name.toLowerCase().replace(/^\.+/, "").split(".");
   if (parts.length < 2 || !parts[0]) return null;
   if (!RISKY.has(parts.at(-1) ?? "")) return null;
   return parts.length > 2 ? "disguised" : "app";
@@ -135,6 +168,8 @@ export function cleanPeerText(raw: string, max: number): string {
     .replaceAll("\u0000", " ")
     .replace(CONTROL, " ")
     .replace(INVISIBLE, "")
-    .normalize("NFC");
+    .normalize("NFC")
+    // A letter keeps at most two accents or other combining marks; more only smears the text.
+    .replace(/(\p{M}{2})\p{M}+/gu, "$1");
   return [...text.replace(/\s+/g, " ").trim()].slice(0, max).join("").trim();
 }

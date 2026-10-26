@@ -79,23 +79,30 @@ export function openSignal(
     opened = true;
     resolveReady();
   });
+  // Frames are opened one after another, and a close is reported only after every frame that
+  // arrived before it has been handled: the last frame (the other device's "bye", or its final
+  // connection details) can otherwise be lost to a close that overtakes its decryption.
+  let inbox: Promise<void> = Promise.resolve();
   socket.addEventListener("message", (event) => {
     const data = (event as MessageEvent).data;
     if (typeof data !== "string") return;
-    void seal.open(data).then((result) => {
-      if (finished) return;
-      if (result.ok) signal.onmessage(result.message);
-      else if (result.reason === "tampered") fail(new HanditError("INTRO_TAMPERED"));
-      else if (result.reason === "invalid")
-        fail(new HanditError("UNKNOWN_ERROR", "protocol error"));
-      // Replays and frames after bye are dropped: they were already handled or are too late.
-    });
+    inbox = inbox
+      .then(() => seal.open(data))
+      .then((result) => {
+        if (finished) return;
+        if (result.ok) signal.onmessage(result.message);
+        else if (result.reason === "tampered") fail(new HanditError("INTRO_TAMPERED"));
+        else if (result.reason === "invalid")
+          fail(new HanditError("UNKNOWN_ERROR", "protocol error"));
+        // Replays and frames after bye are dropped: they were already handled or are too late.
+      })
+      .catch(() => {});
   });
   socket.addEventListener("close", (event) => {
     const { code, reason } = event as CloseEvent;
     const details = `Room closed the connection (${code}${reason ? `: ${reason}` : ""})`;
     const mapped = opened ? (CLOSE_CODES[code] ?? (code >= 4000 ? "UNKNOWN_ERROR" : null)) : null;
-    fail(new HanditError(mapped ?? "SERVER_UNREACHABLE", details));
+    inbox = inbox.then(() => fail(new HanditError(mapped ?? "SERVER_UNREACHABLE", details)));
   });
   return signal;
 }

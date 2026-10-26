@@ -1,7 +1,7 @@
 import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
-import { clientKey, LIMITS, limitsFor, WINDOW_MS } from "../src/limiter";
+import { clientKey, LIMITS, limitsFor, WINDOW_MS, wideKey } from "../src/limiter";
 import { connect, newIp, newRoomId } from "./helpers";
 
 const limiter = (ip: string) => env.LIMITER.getByName(ip);
@@ -121,18 +121,22 @@ describe("limitsFor", () => {
   });
 
   test("the test multiplier raises them, and nonsense never lowers them", () => {
-    expect(limitsFor({ LIMIT_MULTIPLIER: "100" })).toEqual({
+    expect(limitsFor({ LIMIT_MULTIPLIER: "100" }, true)).toEqual({
       room: 10_000,
       join: 30_000,
       auth: 3000,
     });
-    expect(limitsFor({ LIMIT_MULTIPLIER: "5000" })).toEqual({
+    expect(limitsFor({ LIMIT_MULTIPLIER: "5000" }, true)).toEqual({
       room: 100_000,
       join: 300_000,
       auth: 30_000,
     });
     for (const bad of ["0", "-5", "abc", "NaN", "0.2"]) {
-      expect(limitsFor({ LIMIT_MULTIPLIER: bad })).toEqual({ room: 100, join: 300, auth: 30 });
+      expect(limitsFor({ LIMIT_MULTIPLIER: bad }, true)).toEqual({
+        room: 100,
+        join: 300,
+        auth: 30,
+      });
     }
   });
 });
@@ -159,4 +163,68 @@ describe("sign-in routes are limited too", () => {
       expect(response.status).toBe(200);
     }
   });
+});
+
+describe("the test multiplier only works on the local test server (S7)", () => {
+  test("on any other host it is ignored, whatever the variable says", () => {
+    expect(limitsFor({ LIMIT_MULTIPLIER: "1000" })).toEqual({ room: 100, join: 300, auth: 30 });
+    expect(limitsFor({ LIMIT_MULTIPLIER: "1000" }, false)).toEqual({
+      room: 100,
+      join: 300,
+      auth: 30,
+    });
+  });
+  test("on localhost it applies", () => {
+    expect(limitsFor({ LIMIT_MULTIPLIER: "10" }, true)).toEqual({
+      room: 1000,
+      join: 3000,
+      auth: 300,
+    });
+  });
+});
+
+describe("wideKey: one person can own thousands of /64s (S7)", () => {
+  const request = (ip: string | null) =>
+    new Request("https://x.test/", ip ? { headers: { "CF-Connecting-IP": ip } } : {});
+  const key = (ip: string | null) => wideKey(request(ip));
+
+  test("IPv4 and missing addresses have no wide bucket", () => {
+    expect(key("203.0.113.9")).toBeNull();
+    expect(key("::ffff:203.0.113.9")).toBeNull();
+    expect(key(null)).toBeNull();
+  });
+  test("IPv6 addresses share a bucket per /48", () => {
+    expect(key("2001:db8:1:2:3:4:5:6")).toBe("2001:db8:1::/48");
+    expect(key("2001:db8:1:ffff::1")).toBe("2001:db8:1::/48");
+    expect(key("2001:0db8:0001::")).toBe("2001:db8:1::/48");
+    expect(key("2001:DB8:2::1")).toBe("2001:db8:2::/48");
+    expect(key("::1")).toBe("0:0:0::/48");
+  });
+  test("it is a different key from the /64 one", () => {
+    const r = request("2001:db8:1:2::1");
+    expect(clientKey(r)).toBe("2001:db8:1:2::/64");
+    expect(wideKey(r)).not.toBe(clientKey(r));
+  });
+  test("the wide bucket allows ten times as much, then refuses", async () => {
+    const wide = limiter(`w:${newRoomId()}`);
+    for (let i = 0; i < LIMITS.room * 10; i++) {
+      expect(await wide.allow("room", false, 10)).toBe(true);
+    }
+    expect(await wide.allow("room", false, 10)).toBe(false);
+  }, 60_000);
+  test("through the Worker, /64s of one /48 are counted together", async () => {
+    // 11 /64s of 30 sign-in attempts each: no /64 reaches its limit (30), the /48 does (300).
+    const prefix = `2001:db8:${(Math.random() * 0xffff) | 0}`;
+    const statuses: number[] = [];
+    for (let net = 0; net < 11; net++) {
+      for (let i = 0; i < 30; i++) {
+        const response = await exports.default.fetch("https://handit.test/auth/github/start", {
+          headers: { "CF-Connecting-IP": `${prefix}:${net}::1` },
+        });
+        statuses.push(response.status);
+      }
+    }
+    expect(statuses.slice(0, 300).includes(429)).toBe(false);
+    expect(statuses.slice(300).every((status) => status === 429)).toBe(true);
+  }, 60_000);
 });

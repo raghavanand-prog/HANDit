@@ -3,6 +3,7 @@ import { toBase64url } from "../src/core/bytes";
 import {
   encodeLink,
   type Link,
+  looksLikeLink,
   Mode,
   newSecret,
   parseFragment,
@@ -146,5 +147,16 @@ describe("secrets and room IDs", () => {
     const ids = await Promise.all([newSecret(), newSecret()].map(roomIdFor));
     expect(ids[0]).toMatch(/^[0-9a-f]{32}$/);
     expect(ids[0]).not.toBe(ids[1]);
+  });
+});
+
+describe("looksLikeLink", () => {
+  test("a fragment the length of a link is treated as one; ordinary anchors are not", () => {
+    expect(looksLikeLink(`#${"A".repeat(51)}`)).toBe(true);
+    expect(looksLikeLink("#main")).toBe(false);
+    expect(looksLikeLink("#")).toBe(false);
+    expect(looksLikeLink("")).toBe(false);
+    expect(looksLikeLink(`#${"A".repeat(5000)}`)).toBe(false);
+    expect(looksLikeLink(`#${"A".repeat(40)}!`)).toBe(false);
   });
 });

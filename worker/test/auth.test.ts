@@ -378,6 +378,35 @@ describe("the session", () => {
   });
 });
 
+describe("the fake provider setting is for the local test server only (S8)", () => {
+  const testEnv: AuthEnv = { ...env, OAUTH_BASE_URL: "http://localhost:8790" };
+  const startAt = async (origin: string) => {
+    const response = await handleAuth(
+      new Request(`${origin}/auth/github/start`, { redirect: "manual" }),
+      testEnv,
+    );
+    return response?.headers.get("location") ?? "";
+  };
+
+  test("on the real site it is ignored: the sign-in goes to GitHub itself", async () => {
+    expect(await startAt("https://handit.test")).toMatch(
+      /^https:\/\/github\.com\/login\/oauth\/authorize/,
+    );
+    expect(await startAt("https://handit-worker.workers.dev")).toMatch(/^https:\/\/github\.com\//);
+  });
+
+  test("on localhost it is used", async () => {
+    expect(await startAt("http://localhost:8788")).toMatch(
+      /^http:\/\/localhost:8790\/login\/oauth\/authorize/,
+    );
+    expect(await startAt("http://127.0.0.1:8788")).toMatch(/^http:\/\/localhost:8790\//);
+  });
+
+  test("a look-alike host name is not localhost", async () => {
+    expect(await startAt("https://localhost.evil.example")).toMatch(/^https:\/\/github\.com\//);
+  });
+});
+
 describe("calls to the provider", () => {
   const callbackWith = async (respond: (url: string) => Response) => {
     const calls: { url: string; signal?: AbortSignal | null }[] = [];

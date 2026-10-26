@@ -13,13 +13,27 @@ const listeners = new Set<() => void>();
 const notify = () => {
   for (const listener of listeners) listener();
 };
-if (typeof window !== "undefined") window.addEventListener("popstate", notify);
+// The path the app is showing, so a refused "Back" can put it back.
+let shown = typeof location === "undefined" ? "/" : location.pathname;
+
+if (typeof window !== "undefined") {
+  window.addEventListener("popstate", () => {
+    // The browser's Back and Forward buttons ask first too, for example during a transfer.
+    if (guard && !guard()) {
+      history.pushState(null, "", shown);
+      return;
+    }
+    shown = location.pathname;
+    notify();
+  });
+}
 
 export function navigate(path: string, { replace = false } = {}) {
   if (path === location.pathname) return;
   if (guard && !guard()) return;
   if (replace) history.replaceState(null, "", path);
   else history.pushState(null, "", path);
+  shown = location.pathname;
   window.scrollTo(0, 0);
   notify();
 }

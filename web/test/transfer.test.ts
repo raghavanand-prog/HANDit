@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { CHUNK_BYTES, MAX_ITEMS, type OfferItem } from "../src/core/protocol";
-import { Receiver, Sender, type TransferState } from "../src/core/transfer";
+import { allIdentical, Receiver, Sender, type TransferState } from "../src/core/transfer";
 import { MemoryChannel, MemorySink, MemorySource } from "./channel";
 
 const MiB = 1024 * 1024;
@@ -290,5 +290,78 @@ describe("cancel and failures", () => {
     a.send(`{"t":"ping","pad":"${"x".repeat(64 * 1024)}"}`);
     const state = await run;
     expect(state.error?.details).toContain("protocol error");
+  });
+});
+
+describe("what is shown as identical (S10)", () => {
+  const file = (i: number): OfferItem => ({ i, path: `f${i}`, size: 1, kind: "file", type: "" });
+  const dir = (i: number): OfferItem => ({ i, path: `d${i}`, size: 0, kind: "dir", type: "" });
+  const state = (items: OfferItem[], outcomes: TransferState["outcomes"]) => ({ items, outcomes });
+
+  test("an offer with no files never counts as identical", () => {
+    expect(allIdentical(state([], {}))).toBe(false);
+    expect(allIdentical(state([dir(0), dir(1)], {}))).toBe(false); // only folders
+  });
+  test("every file verified counts, folders aside", () => {
+    expect(
+      allIdentical(state([file(0), dir(1), file(2)], { 0: { ok: true }, 2: { ok: true } })),
+    ).toBe(true);
+  });
+  test("one failed or missing file doesn't", () => {
+    const failed = { ok: false, code: "INTEGRITY_FAILED" } as const;
+    expect(allIdentical(state([file(0), file(1)], { 0: { ok: true }, 1: failed }))).toBe(false);
+    expect(allIdentical(state([file(0), file(1)], { 0: { ok: true } }))).toBe(false);
+  });
+  test("outcomes for indexes that aren't files can't make up the count", () => {
+    expect(allIdentical(state([file(0), file(1)], { 0: { ok: true }, 5: { ok: true } }))).toBe(
+      false,
+    );
+  });
+});
+
+describe("a hostile receiver can't make the sender show a result it didn't earn (S10)", () => {
+  /** A receiver that accepts, confirms every file, and then sends the summary it is given. */
+  function hostileReceiver(summary: object) {
+    const { a, b, sender } = setUp([10, 10]);
+    const send = (m: object) => b.send(JSON.stringify(m));
+    let id = "";
+    b.addEventListener("message", (event) => {
+      const data = (event as MessageEvent).data;
+      if (typeof data !== "string") return;
+      const m = JSON.parse(data);
+      if (m.t === "offer") id = m.id;
+      if (m.t === "offer_items") send({ t: "accept", id });
+      if (m.t === "file_end") send({ t: "file_result", i: m.i, ok: true });
+      if (m.t === "done") send(summary);
+    });
+    return { a, sender };
+  }
+
+  test("a summary naming an index that isn't a file is a protocol error", async () => {
+    const { sender } = hostileReceiver({ t: "summary", ok: [0, 5], failed: [] });
+    const state = await sender.run();
+    expect(state.error?.details).toContain("protocol error");
+    expect(state.phase).not.toBe("complete");
+  });
+
+  test("a summary that leaves a file out is a protocol error", async () => {
+    const { sender } = hostileReceiver({ t: "summary", ok: [0], failed: [] });
+    expect((await sender.run()).error?.details).toContain("protocol error");
+  });
+
+  test("a summary that names a file twice is a protocol error", async () => {
+    const { sender } = hostileReceiver({
+      t: "summary",
+      ok: [0, 1],
+      failed: [{ i: 1, code: "INTEGRITY_FAILED" }],
+    });
+    expect((await sender.run()).error?.details).toContain("protocol error");
+  });
+
+  test("an honest summary still completes", async () => {
+    const { sender } = hostileReceiver({ t: "summary", ok: [0, 1], failed: [] });
+    const state = await sender.run();
+    expect(state.phase).toBe("complete");
+    expect(state.outcomes).toEqual({ 0: { ok: true }, 1: { ok: true } });
   });
 });

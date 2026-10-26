@@ -62,6 +62,9 @@ export function parseFragment(fragment: string): LinkResult {
   };
 }
 
+/** Whether a fragment is the length of a HANDit link, as opposed to an ordinary anchor like "#main". */
+export const looksLikeLink = (hash: string) => /^#[A-Za-z0-9_-]{40,1100}$/.test(hash);
+
 /** Reads the link from the address bar, then replaces the address with /j so the secret doesn't stay there. */
 export function takeLinkFromAddressBar(
   location: { hash: string },

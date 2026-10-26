@@ -30,3 +30,10 @@ test.each([
 ])("query '%s' is a bad request", async (query) => {
   expect((await fetchPath(`/ws/${newRoomId()}?${query}`, upgrade)).status).toBe(400);
 });
+
+test("the Worker's own replies are never cached", async () => {
+  const response = await fetchPath("/anything-else");
+  expect(response.status).toBe(404);
+  expect(response.headers.get("Cache-Control")).toBe("no-store");
+  expect(response.headers.get("X-Frame-Options")).toBe("DENY");
+});

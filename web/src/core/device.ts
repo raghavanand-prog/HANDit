@@ -39,6 +39,13 @@ export function describeDevice(userAgent: string, maxTouchPoints = 0): DeviceInf
   return { os, browser };
 }
 
+const BROWSERS = "Safari|Chrome|Edge|Firefox|Samsung Internet|Opera|Browser";
+const SYSTEMS = "iPhone|iPad|Android|Windows|Mac|ChromeOS|Linux|Unknown";
+const LABEL = new RegExp(`^(${BROWSERS}) on (${SYSTEMS})$`);
+
+/** The other device's label, only if it is a browser and system HANDit knows; otherwise a neutral one. */
+export const cleanDeviceLabel = (raw: string) => (LABEL.test(raw) ? raw : "Browser on Unknown");
+
 export const uaLabel = ({ os, browser }: DeviceInfo) => `${browser} on ${os}`;
 
 export function defaultDeviceName({ os }: DeviceInfo): string {
