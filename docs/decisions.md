@@ -71,7 +71,7 @@ It is not unlimited on purpose: the free Cloudflare plan allows about 100,000 Wo
 ## 2026-10-24 — The Room and the per-IP limits
 
 **Per-IP limits use a second, tiny Durable Object, `Limiter`,** one per client address. It counts exactly what the protocol asks for: at most 20 new codes and 60 join attempts per 10 minutes, over a sliding window.
-- **What it stores:** only the times of recent allowed attempts. It deletes them 10 minutes after the last one, using an alarm. It never stores the address itself, and nothing is logged.
+- **What it stores:** only the times of recent allowed attempts. It deletes them 10 minutes after the last one, using an alarm. HANDit's code never writes the address into the object's data and nothing is logged, but the object's **name is the address** (the /64 for IPv6), so Cloudflare's systems hold it for as long as the object exists, which is at most 10 minutes after the last attempt.
 - **How addresses are counted:** IPv4 addresses one by one. IPv6 addresses per /64, because one user usually controls a whole /64 and could otherwise rotate through it.
 - **Why not Cloudflare's built-in rate limiter:** it only counts over 10- or 60-second windows, approximately and separately in each Cloudflare location. Using it would have loosened the 10-minute limits.
 - **Cost:** about 2 extra Durable Object requests per transfer, well inside the free plan.
