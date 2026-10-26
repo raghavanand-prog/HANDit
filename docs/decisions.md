@@ -164,7 +164,7 @@ Five reviews, two of them attacking a local copy, found no way to read or alter 
 - The Worker's own replies are never cached (`Cache-Control: no-store`), and `X-Frame-Options: DENY` is sent next to `frame-ancestors 'none'` for old browsers.
 
 **Left as they are, for the owner to decide**
-- **The per-IP limits (100 codes and 300 joins per 10 minutes).** One IPv4 address can reach roughly 14,000 new rooms a day. At about six storage writes each that is near the free plan's 100,000 daily writes, so one address could block everyone until midnight UTC. The request count was weighed when the limit was raised; the writes were not.
+- **The per-IP limits (100 codes and 300 joins per 10 minutes). Decision: kept as they are (owner, 2026-10-26); a rate limit in front of the Worker is the planned protection.** One IPv4 address can reach roughly 14,000 new rooms a day. At about six storage writes each that is near the free plan's 100,000 daily writes, so one address could block everyone until midnight UTC. The request count was weighed when the limit was raised; the writes were not.
 - **The file type a sender claims is kept** (rule 6: never change metadata). Where a browser opens a received file instead of downloading it, a claimed `text/html` renders under the site's origin; the CSP still blocks any script.
 - **A room ID can be claimed again once its Room has ended.** Someone holding a leaked link could then meet a late guest. A tombstone would break "keeps nothing"; the alternative is for the guest to refuse a link whose expiry time has passed, which gives that advisory byte an effect.
 - The Room allows 100 frames in all. A device with many network interfaces could reach that while connecting.
