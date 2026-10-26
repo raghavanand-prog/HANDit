@@ -5,6 +5,7 @@
 // can substitute their own.
 import { HanditError, toHanditError } from "./codes";
 import type { Mode } from "./link";
+import { cleanPeerText } from "./names";
 import type { IntroMessage, Role } from "./seal";
 import type { Signal } from "./signal";
 
@@ -119,7 +120,8 @@ export function introduce({
         if (m.t !== "hello" && m.t !== "welcome") throw protocolError();
         if (m.v !== PROTOCOL_VERSION) throw new HanditError("LINK_UNSUPPORTED_VERSION");
         if (m.t === "welcome" && m.mode !== mode) throw protocolError();
-        peer = { name: m.name, ua: m.ua };
+        // Shown in the prompts: cut short and cleaned, so a hostile name can't fill the screen or hide in it.
+        peer = { name: cleanPeerText(m.name, 40), ua: cleanPeerText(m.ua, 40) };
 
         if (role === "owner") {
           onJoined?.(peer);

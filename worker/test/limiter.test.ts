@@ -1,5 +1,5 @@
 import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
-import { env } from "cloudflare:workers";
+import { env, exports } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
 import { clientKey, LIMITS, limitsFor, WINDOW_MS } from "../src/limiter";
 import { connect, newIp, newRoomId } from "./helpers";
@@ -7,7 +7,7 @@ import { connect, newIp, newRoomId } from "./helpers";
 const limiter = (ip: string) => env.LIMITER.getByName(ip);
 const age = (ip: string, ms: number) =>
   runInDurableObject(limiter(ip), (_, state) => {
-    for (const kind of ["room", "join"]) {
+    for (const kind of ["room", "join", "auth"]) {
       const times = state.storage.kv.get<number[]>(kind) ?? [];
       state.storage.kv.put(
         kind,
@@ -30,6 +30,14 @@ describe("counting (S7)", () => {
     expect(LIMITS.join).toBe(300);
     for (let i = 0; i < 300; i++) expect(await limiter(ip).allow("join")).toBe(true);
     expect(await limiter(ip).allow("join")).toBe(false);
+  });
+
+  test("at most 30 sign-in attempts per IP", async () => {
+    const ip = newIp();
+    expect(LIMITS.auth).toBe(30);
+    for (let i = 0; i < 30; i++) expect(await limiter(ip).allow("auth")).toBe(true);
+    expect(await limiter(ip).allow("auth")).toBe(false);
+    expect(await limiter(ip).allow("room")).toBe(true); // separate counters
   });
 
   test("attempts older than 10 minutes no longer count", async () => {
@@ -108,15 +116,47 @@ describe("clientKey", () => {
 
 describe("limitsFor", () => {
   test("production uses the base limits: 100 codes and 300 joins", () => {
-    expect(limitsFor({})).toEqual({ room: 100, join: 300 });
-    expect(limitsFor({ LIMIT_MULTIPLIER: "" })).toEqual({ room: 100, join: 300 });
+    expect(limitsFor({})).toEqual({ room: 100, join: 300, auth: 30 });
+    expect(limitsFor({ LIMIT_MULTIPLIER: "" })).toEqual({ room: 100, join: 300, auth: 30 });
   });
 
   test("the test multiplier raises them, and nonsense never lowers them", () => {
-    expect(limitsFor({ LIMIT_MULTIPLIER: "100" })).toEqual({ room: 10_000, join: 30_000 });
-    expect(limitsFor({ LIMIT_MULTIPLIER: "5000" })).toEqual({ room: 100_000, join: 300_000 });
+    expect(limitsFor({ LIMIT_MULTIPLIER: "100" })).toEqual({
+      room: 10_000,
+      join: 30_000,
+      auth: 3000,
+    });
+    expect(limitsFor({ LIMIT_MULTIPLIER: "5000" })).toEqual({
+      room: 100_000,
+      join: 300_000,
+      auth: 30_000,
+    });
     for (const bad of ["0", "-5", "abc", "NaN", "0.2"]) {
-      expect(limitsFor({ LIMIT_MULTIPLIER: bad })).toEqual({ room: 100, join: 300 });
+      expect(limitsFor({ LIMIT_MULTIPLIER: bad })).toEqual({ room: 100, join: 300, auth: 30 });
+    }
+  });
+});
+
+describe("sign-in routes are limited too", () => {
+  const authStart = (ip: string) =>
+    exports.default.fetch("https://handit.test/auth/github/start", {
+      headers: { "CF-Connecting-IP": ip },
+    });
+
+  test("the 31st sign-in attempt from one IP is refused with 429, before any provider call", async () => {
+    const ip = newIp();
+    for (let i = 0; i < 30; i++) expect((await authStart(ip)).status).not.toBe(429);
+    expect((await authStart(ip)).status).toBe(429);
+    expect((await authStart(newIp())).status).not.toBe(429); // another IP is unaffected
+  });
+
+  test("the read-only sign-in status calls are not counted", async () => {
+    const ip = newIp();
+    for (let i = 0; i < 40; i++) {
+      const response = await exports.default.fetch("https://handit.test/auth/me", {
+        headers: { "CF-Connecting-IP": ip },
+      });
+      expect(response.status).toBe(200);
     }
   });
 });

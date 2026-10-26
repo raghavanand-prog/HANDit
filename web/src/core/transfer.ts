@@ -202,6 +202,9 @@ abstract class Transfer {
       if (control.t === "cancel") return this.fail(new HanditError("CANCELLED_BY_PEER"));
       message = control;
     } else {
+      // A file chunk is never larger than CHUNK_BYTES. Refused before it is queued, so a
+      // sender can't make this device hold a huge message.
+      if (data.byteLength > CHUNK_BYTES) return this.fail(protocolError("oversized chunk"), true);
       message = data;
     }
     // Handle messages strictly in order, one at a time.

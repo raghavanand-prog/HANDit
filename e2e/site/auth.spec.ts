@@ -41,7 +41,7 @@ test("signing in with GitHub, staying signed in, and signing out", async ({ page
   const payload = JSON.parse(
     Buffer.from((cookies[0]?.value ?? "").split(".")[0] ?? "", "base64url").toString(),
   );
-  expect(Object.keys(payload).sort()).toEqual(["exp", "iat", "n", "p", "v"]);
+  expect(Object.keys(payload).sort()).toEqual(["exp", "iat", "n", "p", "t", "v"]);
   expect(JSON.stringify(payload)).not.toMatch(/ravi@|example\.com|ravi-k/);
 
   await page.reload();

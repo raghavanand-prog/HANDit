@@ -69,7 +69,12 @@ export class Room extends DurableObject<Env> {
 
   override async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
     if (typeof message !== "string") return this.end(Close.BINARY_FRAME, "Text frames only");
-    if (new TextEncoder().encode(message).length > MAX_FRAME_BYTES) {
+    // A string is never shorter in bytes than in characters, so a long one is refused without
+    // encoding it; a short one still gets the exact byte count (multi-byte characters).
+    if (
+      message.length > MAX_FRAME_BYTES ||
+      new TextEncoder().encode(message).length > MAX_FRAME_BYTES
+    ) {
       return this.end(Close.FRAME_TOO_LARGE, "Frame over 32 KiB");
     }
     if (this.countFrame(ws) > MAX_FRAMES) return this.end(Close.TOO_MANY, "Too many frames");
@@ -116,8 +121,10 @@ export class Room extends DurableObject<Env> {
       .reduce((sum, s) => sum + (s.deserializeAttachment() as { frames: number }).frames, 0);
   }
 
-  /** Closes both sockets and deletes everything the Room knew. */
+  /** Closes both sockets and deletes everything the Room knew. Closing fires this once per socket; only the first does the work. */
   private async end(code: number, reason: string): Promise<void> {
+    if (this.ctx.storage.kv.get("meta") === undefined) return;
+    this.ctx.storage.kv.delete("meta"); // synchronous: a second call can't slip in before the wipe
     for (const ws of this.ctx.getWebSockets()) {
       try {
         ws.close(code, reason);

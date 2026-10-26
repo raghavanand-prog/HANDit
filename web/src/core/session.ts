@@ -133,7 +133,8 @@ export class Session {
 
   /** Recipient: accept the file list (only when there's enough storage). */
   accept() {
-    if (!(this.engine instanceof Receiver) || this.state.storage?.ok === false) return;
+    // Not before the storage check has said there is room.
+    if (!(this.engine instanceof Receiver) || this.state.storage?.ok !== true) return;
     this.release = holdTransfer(this.engine.state.id);
     this.engine.accept();
   }

@@ -170,3 +170,45 @@ describe("short life, no records", () => {
     expect(await isWiped(roomId)).toBe(true);
   });
 });
+
+describe("frame size is measured in bytes (S7)", () => {
+  test("a short string of multi-byte characters over 32 KiB is still refused", async () => {
+    const { owner, guest } = await pair();
+    owner.send("€".repeat(11_000)); // 11,000 characters, 33,000 bytes
+    expect((await owner.closed).code).toBe(4413);
+    expect((await guest.closed).code).toBe(4413);
+  });
+
+  test("a string of exactly 32 KiB is forwarded", async () => {
+    const { owner, guest } = await pair();
+    const frame = "a".repeat(32 * 1024);
+    owner.send(frame);
+    expect(await guest.receive()).toBe(frame);
+  });
+
+  test("a string over 32 KiB is refused without being looked at in detail", async () => {
+    const { owner } = await pair();
+    owner.send("a".repeat(32 * 1024 + 1));
+    expect((await owner.closed).code).toBe(4413);
+  });
+});
+
+describe("ending is done once", () => {
+  test("one side leaving wipes the Room a single time, not once per socket", async () => {
+    const roomId = newRoomId();
+    const { owner, guest } = await pair(roomId);
+    const wipes = await runInDurableObject(env.ROOM.getByName(roomId), (_, state) => {
+      let count = 0;
+      const original = state.storage.deleteAll.bind(state.storage);
+      state.storage.deleteAll = async () => {
+        count++;
+        return original();
+      };
+      return { get: () => count };
+    });
+    owner.close();
+    await guest.closed;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(wipes.get()).toBe(1);
+  });
+});

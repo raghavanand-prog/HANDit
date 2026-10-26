@@ -151,7 +151,11 @@ export const strings = {
   },
 
   peer: {
-    label: (name: string, ua: string) => `${name} (${ua.split(" on ")[0] ?? ua})`,
+    label: (name: string, ua: string) => {
+      const who = name || "Unnamed device";
+      const browser = ua.split(" on ")[0] ?? ua;
+      return browser ? `${who} (${browser})` : who;
+    },
     joined: "joined",
     waitingAccept: "Waiting for them to accept…",
     choosing: "They're choosing files… (up to 3 minutes)",

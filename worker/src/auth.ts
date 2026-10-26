@@ -20,9 +20,11 @@ export interface AuthEnv {
 type Provider = "github" | "google";
 const PROVIDERS: Provider[] = ["github", "google"];
 
-const SESSION_DAYS = 30;
+const SESSION_DAYS = 7;
 const PENDING_SECONDS = 600;
 const MAX_NAME = 60;
+// A slow or silent provider must not tie up the Worker.
+const PROVIDER_TIMEOUT_MS = 5000;
 
 interface ProviderConfig {
   authorize: string;
@@ -98,8 +100,16 @@ async function sign(value: object, secret: string): Promise<string> {
   return `${payload}.${b64url(new Uint8Array(signature))}`;
 }
 
-/** The signed value if the signature is genuine and it hasn't expired (`exp`, in seconds). */
-async function verify<T extends { exp: number }>(token: string, secret: string): Promise<T | null> {
+/**
+ * The signed value if the signature is genuine, it hasn't expired (`exp`, in seconds) and it is
+ * the kind asked for (`t`). Pending sign-ins and sessions share one key, so without the kind a
+ * pending-sign-in cookie, which anyone can get, could be sent back as a session.
+ */
+async function verify<T extends { exp: number; t: string }>(
+  token: string,
+  secret: string,
+  kind: T["t"],
+): Promise<T | null> {
   const [payload = "", signature = "", extra] = token.split(".");
   if (extra !== undefined || !payload || !signature) return null;
   const sig = unb64url(signature);
@@ -115,7 +125,9 @@ async function verify<T extends { exp: number }>(token: string, secret: string):
     const bytes = unb64url(payload);
     if (!bytes) return null;
     const value = JSON.parse(new TextDecoder().decode(bytes)) as T;
-    return typeof value.exp === "number" && value.exp > Date.now() / 1000 ? value : null;
+    return value.t === kind && typeof value.exp === "number" && value.exp > Date.now() / 1000
+      ? value
+      : null;
   } catch {
     return null;
   }
@@ -197,12 +209,14 @@ export function cleanName(raw: unknown): string {
 // The routes
 
 interface Pending {
+  t: "pending";
   s: string; // state
   v: string; // PKCE verifier
   p: Provider;
   exp: number;
 }
 interface Session {
+  t: "session";
   v: 1;
   p: Provider;
   n: string;
@@ -223,7 +237,9 @@ export async function handleAuth(request: Request, env: AuthEnv): Promise<Respon
 
   if (url.pathname === "/auth/me" && request.method === "GET") {
     const token = readCookie(request, url, "handit_session");
-    const session = strongSecret(env) && token ? await verify<Session>(token, secret) : null;
+    const found =
+      strongSecret(env) && token ? await verify<Session>(token, secret, "session") : null;
+    const session = found && typeof found.n === "string" && found.n ? found : null;
     // One request tells the page everything it needs: who is signed in, and what is on offer.
     return json({
       user: session ? { name: session.n, provider: session.p } : null,
@@ -254,6 +270,7 @@ async function start(url: URL, provider: Provider, env: AuthEnv): Promise<Respon
   const state = randomToken();
   const verifier = randomToken();
   const pending: Pending = {
+    t: "pending",
     s: state,
     v: verifier,
     p: provider,
@@ -280,7 +297,11 @@ async function callback(
   env: AuthEnv,
 ): Promise<Response> {
   const secret = env.SESSION_SECRET ?? "";
-  const pending = await verify<Pending>(readCookie(request, url, "handit_oauth"), secret);
+  const pending = await verify<Pending>(
+    readCookie(request, url, "handit_oauth"),
+    secret,
+    "pending",
+  );
   const state = url.searchParams.get("state");
   const code = url.searchParams.get("code");
   // The pending sign-in must be ours, recent, for this provider, and match the state the
@@ -309,7 +330,9 @@ async function callback(
         client_secret: config.secret ?? "",
         code_verifier: pending.v,
       }).toString(),
+      signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
     });
+    if (!exchange.ok) return failure(url);
     const { access_token } = (await exchange.json()) as { access_token?: string };
     if (typeof access_token !== "string" || !access_token) return failure(url);
 
@@ -319,7 +342,9 @@ async function callback(
         Accept: "application/json",
         "User-Agent": "HANDit",
       },
+      signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
     });
+    if (!me.ok) return failure(url);
     const profile = (await me.json()) as Record<string, unknown>;
     // Only a display name is kept. The email, picture and provider id are never read.
     const name =
@@ -330,6 +355,7 @@ async function callback(
 
     const now = Math.floor(Date.now() / 1000);
     const session: Session = {
+      t: "session",
       v: 1,
       p: provider,
       n: name,

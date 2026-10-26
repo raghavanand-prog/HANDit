@@ -1,10 +1,10 @@
 import { DurableObject } from "cloudflare:workers";
 
-// Per-IP abuse limits: at most 100 new codes and 300 join attempts per 10 minutes.
+// Per-IP abuse limits per 10 minutes: at most 100 new codes, 300 join attempts and 30 sign-in attempts.
 // One Limiter per client IP keeps the times of recent attempts, nothing else,
 // and deletes them 10 minutes after the last one.
 export const WINDOW_MS = 10 * 60 * 1000;
-export const LIMITS = { room: 100, join: 300 } as const;
+export const LIMITS = { room: 100, join: 300, auth: 30 } as const;
 export type LimitKind = keyof typeof LIMITS;
 
 /**
@@ -14,7 +14,11 @@ export type LimitKind = keyof typeof LIMITS;
  */
 export function limitsFor(env: { LIMIT_MULTIPLIER?: string }): Record<LimitKind, number> {
   const multiplier = Math.min(1000, Math.max(1, Math.floor(Number(env.LIMIT_MULTIPLIER) || 1)));
-  return { room: LIMITS.room * multiplier, join: LIMITS.join * multiplier };
+  return {
+    room: LIMITS.room * multiplier,
+    join: LIMITS.join * multiplier,
+    auth: LIMITS.auth * multiplier,
+  };
 }
 
 export class Limiter extends DurableObject<Env> {
@@ -32,7 +36,10 @@ export class Limiter extends DurableObject<Env> {
 
   override async alarm(): Promise<void> {
     const now = Date.now();
-    const newest = Math.max(0, ...this.recent("room", now), ...this.recent("join", now));
+    const newest = Math.max(
+      0,
+      ...(Object.keys(LIMITS) as LimitKind[]).flatMap((kind) => this.recent(kind, now)),
+    );
     if (newest === 0) await this.ctx.storage.deleteAll();
     else await this.ctx.storage.setAlarm(newest + WINDOW_MS);
   }

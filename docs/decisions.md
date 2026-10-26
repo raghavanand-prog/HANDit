@@ -51,7 +51,7 @@ The interface moved to a minimal, Apple-like visual language at the owner's requ
 ## 2026-10-25 — Optional sign-in, and a new home page
 
 **Optional sign-in with GitHub and Google (the plan's D-19 said "no accounts").** The owner asked for a login page. It is built so the product promise survives: signing in is **never required**, and the guest path is always the clear way on. What it adds is a name: the person's first name in the header, a greeting, and a friendlier device name ("Ravi's iPhone") for the other device to see.
-- **Nothing is stored on the server.** No database, no user table. After the provider confirms who you are, the server puts a name and the provider in a signed cookie (HMAC-SHA-256, 30 days) and forgets you. The email, picture and provider's id are never read, let alone kept. Sign out deletes the cookie.
+- **Nothing is stored on the server.** No database, no user table. After the provider confirms who you are, the server puts a name and the provider in a signed cookie (HMAC-SHA-256, 7 days) and forgets you. The email, picture and provider's id are never read, let alone kept. Sign out deletes the cookie.
 - **The standard flow, done carefully:** authorization code with `state` and PKCE (S256), a short-lived signed "pending sign-in" cookie, the provider's secret used only on the server, `HttpOnly`, `Secure`, `SameSite=Lax` and `__Host-` cookies, a cleaned display name (control and bidirectional characters removed), and a sign-out that refuses other sites. A changed, expired or foreign cookie is simply "signed out".
 - **Off until configured.** Each provider appears only if its client ID and secret are set, and the whole feature needs a strong `SESSION_SECRET`. Until then the site shows no Sign in link at all, so there is no dead button.
 - **One Worker request per page visit** for the sign-in state (`/auth/me` answers both "who" and "which providers"), so it stays well inside the free plan's 100,000 requests a day. The service worker never caches `/auth/*`.
@@ -124,3 +124,17 @@ The protocol fixes what the link and sealed frames contain but leaves a few byte
 **Also considered:** `lean-qr` (smaller, but encode-only), `qrcode` (three dependencies, including a command-line parser), `qrcode-generator` and `uqr`.
 
 **When it's installed:** with the first screen that draws a code, so no unused dependency ships before then.
+
+## 2026-10-26 — Hardening after a review of the Worker, the page and the live site
+
+**What changed:** small fixes, none of which touches the protocol (§5) or the security rules (§6).
+- **Sign-in routes are rate limited.** `/auth/<provider>/start` and `/callback` count against the same per-IP `Limiter`: at most 30 attempts per 10 minutes. Without it, a script could make the Worker call GitHub or Google over and over with our client secret. Both calls to a provider now have a 5-second time limit, and an error status from the provider fails the sign-in.
+- **A pending sign-in is not a session.** Both are signed with the same key, so each now carries its kind (`t`) and `verify` requires it. Before, the cookie anyone gets at the start of a sign-in could be sent back as a session. Sessions last 7 days instead of 30; logging out only clears the cookie, so a shorter life limits a stolen one.
+- **The Room does its clean-up once.** Closing a Room fires one event per socket; only the first now wipes the storage. Frame size is checked by character count first, then by exact bytes.
+- **The receiver refuses a data message larger than one chunk (64 KiB)** before queueing it. It still has no limit on how much it has queued; an honest receiver with a slow disk can legitimately fall behind, so a limit there could break a real transfer.
+- **Files shared into the installed app** (`/share-target`) are accepted only from the app or the system share sheet (`Sec-Fetch-Site`, or `Origin` when that is missing), at most 1,000 files at a time. A form on another site can no longer fill the send list.
+- **The service worker no longer keeps an HTML page under a script's address.** The single-page fallback answers any unknown path with the app's HTML and status 200.
+- **Names from the other device are cleaned before they are shown:** control and invisible characters removed, cut to 40 characters, an empty name shown as "Unnamed device". The filename rules also cover more invisible characters (soft hyphen, line separators, tag characters and others), the superscript COM and LPT names, `CONIN$`, `CONOUT$` and names like `con .txt`. Invisible characters are removed before normalising to NFC, a ZIP's name is cut to 255 bytes, and more script and installer types get the warning.
+- **Accept stays off until the storage check has finished,** in the code as well as the button.
+
+**Not changed, on purpose:** the file type the sender claims is still kept (rule 6 says never change metadata), and a room ID can still be claimed again after its Room has ended (a fix would keep a short-lived record, which §6 forbids). Both are open decisions for the owner.

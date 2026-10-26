@@ -1,6 +1,14 @@
 import { describe, expect, test } from "vitest";
-import { isolate, makeSafe, riskOf, safeComponent, UnsafeOffer } from "../src/core/names";
+import {
+  cleanPeerText,
+  isolate,
+  makeSafe,
+  riskOf,
+  safeComponent,
+  UnsafeOffer,
+} from "../src/core/names";
 import type { OfferItem } from "../src/core/protocol";
+import { zipName } from "../src/core/save";
 
 const files = (...paths: string[]): OfferItem[] =>
   paths.map((path, i) => ({ i, path, size: 1, kind: "file", type: "" }));
@@ -192,6 +200,15 @@ describe("apps, installers and scripts are flagged", () => {
   test.each([
     ["setup.exe", "app"],
     ["install.MSI", "app"],
+    ["page.hta", "app"],
+    ["library.dll", "app"],
+    ["disk.iso", "app"],
+    ["package.deb", "app"],
+    ["tool.rpm", "app"],
+    ["launch.jnlp", "app"],
+    ["script.py", "app"],
+    ["settings.reg", "app"],
+    ["shortcut.url", "app"],
     ["run.sh", "app"],
     ["script.JS", "app"],
     ["Tool.app", "app"],
@@ -211,4 +228,96 @@ describe("apps, installers and scripts are flagged", () => {
 
 test("names are isolated for display, so they can't reorder the text around them", () => {
   expect(isolate("abc")).toBe("\u2068abc\u2069");
+});
+
+describe("more invisible characters are removed (S4)", () => {
+  // Soft hyphen, Arabic letter mark, Mongolian vowel separator, line and paragraph separators,
+  // word joiner and the invisible math operators, interlinear annotation marks, and tag characters.
+  test.each([
+    ["a\u00adb.txt", "ab.txt"],
+    ["a\u061cb.txt", "ab.txt"],
+    ["a\u180eb.txt", "ab.txt"],
+    ["a\u2028b.txt", "ab.txt"],
+    ["a\u2029b.txt", "ab.txt"],
+    ["a\u2060b.txt", "ab.txt"],
+    ["a\u2062b.txt", "ab.txt"],
+    ["a\u2064b.txt", "ab.txt"],
+    ["a\ufff9b.txt", "ab.txt"],
+    ["a\ufffbb.txt", "ab.txt"],
+    ["a\u{e0041}b.txt", "ab.txt"],
+    ["a\u{e007f}b.txt", "ab.txt"],
+    ["gpj\u202e.exe", "gpj.exe"],
+  ])("%j → %j", (input, expected) => {
+    expect(safeComponent(input)).toBe(expected);
+  });
+
+  test("removing an invisible character can't leave a name that is not in NFC", () => {
+    // "e", a soft hyphen, then a combining acute accent: after removal they must still compose.
+    expect(safeComponent("cole\u00ad\u0301.txt")).toBe("col\u00e9.txt");
+    expect(safeComponent("e\u00ad\u0301.txt")).toBe("\u00e9.txt");
+    for (const input of ["e\u2060\u0301", "a\u00ad\u0300b"]) {
+      const out = safeComponent(input);
+      expect(out).toBe(out.normalize("NFC"));
+    }
+  });
+});
+
+describe("more Windows device names are caught (S4)", () => {
+  test.each([
+    ["COM\u00b9.txt", "_COM\u00b9.txt"],
+    ["com\u00b2", "_com\u00b2"],
+    ["LPT\u00b3.log", "_LPT\u00b3.log"],
+    ["CONIN$", "_CONIN$"],
+    ["conout$.txt", "_conout$.txt"],
+    ["con .txt", "_con .txt"],
+    ["nul   .txt", "_nul   .txt"],
+    ["CONIN$X", "CONIN$X"],
+    ["COM\u00b9X", "COM\u00b9X"],
+  ])("%j → %j", (input, expected) => {
+    expect(safeComponent(input)).toBe(expected);
+  });
+});
+
+describe("a ZIP's name stays within 255 bytes (S4)", () => {
+  const folder = (name: string) => [
+    { i: 0, path: `${name}/a.txt`, size: 1, kind: "file" as const, type: "" },
+  ];
+  test("a folder name of 255 bytes still gives a valid ZIP name", () => {
+    const top = safeComponent("x".repeat(400));
+    expect(utf8Length(top)).toBe(255);
+    const name = zipName(folder(top));
+    expect(utf8Length(name)).toBeLessThanOrEqual(255);
+    expect(name.endsWith(".zip")).toBe(true);
+  });
+  test("multi-byte names are cut on a character boundary", () => {
+    const name = zipName(folder(safeComponent("😀".repeat(100))));
+    expect(utf8Length(name)).toBeLessThanOrEqual(255);
+    expect(name.endsWith(".zip")).toBe(true);
+    expect(name).not.toContain("\ufffd");
+  });
+  test("short names are unchanged", () => {
+    expect(zipName(folder("Holiday"))).toBe("Holiday.zip");
+    expect(zipName([{ i: 0, path: "a.txt", size: 1, kind: "file", type: "" }])).toBe(
+      "HANDit files.zip",
+    );
+  });
+});
+
+describe("text from the other device is cleaned before it is shown (S4)", () => {
+  test("control, invisible and bidirectional characters are removed", () => {
+    expect(cleanPeerText("Mom\u202e\u0007\u200b", 40)).toBe("Mom");
+    expect(cleanPeerText("a\u2028b\u00adc\u{e0041}d", 40)).toBe("abcd");
+  });
+  test("white space is collapsed and trimmed", () => {
+    expect(cleanPeerText("  Ravi's \n\t  iPhone  ", 40)).toBe("Ravi's iPhone");
+  });
+  test("it is cut to the limit in whole characters", () => {
+    expect([...cleanPeerText("x".repeat(5000), 40)]).toHaveLength(40);
+    const emoji = cleanPeerText("😀".repeat(100), 40);
+    expect([...emoji]).toHaveLength(40);
+    expect(emoji).not.toContain("\ufffd");
+  });
+  test("nothing left means an empty string, for the caller to replace", () => {
+    expect(cleanPeerText("\u200b\u202e \u0000", 40)).toBe("");
+  });
 });

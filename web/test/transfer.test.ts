@@ -254,4 +254,41 @@ describe("cancel and failures", () => {
     const state = await receiver.run();
     expect(state.error?.details).toContain("protocol error");
   });
+
+  test("a binary message larger than a chunk is a protocol error before it is processed", async () => {
+    const { a, receiver } = setUp([10 * MiB]);
+    const sendRaw = (m: object) => a.send(JSON.stringify(m));
+    receiver.onchange = (s) => {
+      if (s.phase === "deciding") {
+        receiver.accept();
+        sendRaw({ t: "file_start", i: 0 });
+        a.send(new Uint8Array(CHUNK_BYTES + 1)); // within the declared size, but not a valid chunk
+      }
+    };
+    const id = "0123456789abcdef0123456789abcdef";
+    sendRaw({ t: "offer", id, files: 1, bytes: 10 * MiB, parts: 1 });
+    sendRaw({
+      t: "offer_items",
+      id,
+      items: [{ i: 0, path: "a", size: 10 * MiB, kind: "file", type: "" }],
+    });
+    const state = await receiver.run();
+    expect(state.error?.details).toContain("protocol error");
+    expect(state.bytes).toBe(0);
+  });
+
+  test("a message of exactly one chunk is fine", async () => {
+    const { files, sink, sender, receiver } = setUp([3 * CHUNK_BYTES]);
+    autoAccept(receiver);
+    await Promise.all([sender.run(), receiver.run()]);
+    expect(sink.files.get(0)).toEqual(files[0]);
+  });
+
+  test("a text message over 64 KiB is a protocol error", async () => {
+    const { a, receiver } = setUp([1000]);
+    const run = receiver.run();
+    a.send(`{"t":"ping","pad":"${"x".repeat(64 * 1024)}"}`);
+    const state = await run;
+    expect(state.error?.details).toContain("protocol error");
+  });
 });

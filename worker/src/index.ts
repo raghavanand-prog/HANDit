@@ -8,6 +8,9 @@ export { Room } from "./room";
 
 // The site itself is served as static assets; the Worker only handles /ws/<room id>.
 const ROOM_PATH = /^\/ws\/([0-9a-f]{32})$/;
+// The two sign-in routes that make the Worker call GitHub or Google. Counted per IP, so nobody can
+// use the site to hammer a provider with our client secret or to burn the free request quota.
+const SIGN_IN_PATH = /^\/auth\/(github|google)\/(start|callback)$/;
 
 /** True if the request has no Origin, or an Origin that is this site (or a listed development one). */
 export function originAllowed(request: Request, url: URL, env: Env): boolean {
@@ -25,6 +28,10 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     // Optional sign-in (/auth/*): nothing here is needed to send or receive files.
+    if (SIGN_IN_PATH.test(url.pathname)) {
+      const limiter = env.LIMITER.getByName(clientKey(request));
+      if (!(await limiter.allow("auth"))) return reply("Too many attempts", 429);
+    }
     const auth = await handleAuth(request, env as unknown as AuthEnv);
     if (auth) return auth;
     const roomId = url.pathname.match(ROOM_PATH)?.[1];
