@@ -1,6 +1,14 @@
 import { describe, expect, test } from "vitest";
-import { isolate, makeSafe, riskOf, safeComponent, UnsafeOffer } from "../src/core/names";
+import {
+  cleanPeerText,
+  isolate,
+  makeSafe,
+  riskOf,
+  safeComponent,
+  UnsafeOffer,
+} from "../src/core/names";
 import type { OfferItem } from "../src/core/protocol";
+import { zipName } from "../src/core/save";
 
 const files = (...paths: string[]): OfferItem[] =>
   paths.map((path, i) => ({ i, path, size: 1, kind: "file", type: "" }));
@@ -192,6 +200,15 @@ describe("apps, installers and scripts are flagged", () => {
   test.each([
     ["setup.exe", "app"],
     ["install.MSI", "app"],
+    ["page.hta", "app"],
+    ["library.dll", "app"],
+    ["disk.iso", "app"],
+    ["package.deb", "app"],
+    ["tool.rpm", "app"],
+    ["launch.jnlp", "app"],
+    ["script.py", "app"],
+    ["settings.reg", "app"],
+    ["shortcut.url", "app"],
     ["run.sh", "app"],
     ["script.JS", "app"],
     ["Tool.app", "app"],
@@ -211,4 +228,174 @@ describe("apps, installers and scripts are flagged", () => {
 
 test("names are isolated for display, so they can't reorder the text around them", () => {
   expect(isolate("abc")).toBe("\u2068abc\u2069");
+});
+
+describe("more invisible characters are removed (S4)", () => {
+  // Soft hyphen, Arabic letter mark, Mongolian vowel separator, line and paragraph separators,
+  // word joiner and the invisible math operators, interlinear annotation marks, and tag characters.
+  test.each([
+    ["a\u00adb.txt", "ab.txt"],
+    ["a\u061cb.txt", "ab.txt"],
+    ["a\u180eb.txt", "ab.txt"],
+    ["a\u2028b.txt", "ab.txt"],
+    ["a\u2029b.txt", "ab.txt"],
+    ["a\u2060b.txt", "ab.txt"],
+    ["a\u2062b.txt", "ab.txt"],
+    ["a\u2064b.txt", "ab.txt"],
+    ["a\ufff9b.txt", "ab.txt"],
+    ["a\ufffbb.txt", "ab.txt"],
+    ["a\u{e0041}b.txt", "ab.txt"],
+    ["a\u{e007f}b.txt", "ab.txt"],
+    ["gpj\u202e.exe", "gpj.exe"],
+  ])("%j → %j", (input, expected) => {
+    expect(safeComponent(input)).toBe(expected);
+  });
+
+  test("removing an invisible character can't leave a name that is not in NFC", () => {
+    // "e", a soft hyphen, then a combining acute accent: after removal they must still compose.
+    expect(safeComponent("cole\u00ad\u0301.txt")).toBe("col\u00e9.txt");
+    expect(safeComponent("e\u00ad\u0301.txt")).toBe("\u00e9.txt");
+    for (const input of ["e\u2060\u0301", "a\u00ad\u0300b"]) {
+      const out = safeComponent(input);
+      expect(out).toBe(out.normalize("NFC"));
+    }
+  });
+});
+
+describe("more Windows device names are caught (S4)", () => {
+  test.each([
+    ["COM\u00b9.txt", "_COM\u00b9.txt"],
+    ["com\u00b2", "_com\u00b2"],
+    ["LPT\u00b3.log", "_LPT\u00b3.log"],
+    ["CONIN$", "_CONIN$"],
+    ["conout$.txt", "_conout$.txt"],
+    ["con .txt", "_con .txt"],
+    ["nul   .txt", "_nul   .txt"],
+    ["CONIN$X", "CONIN$X"],
+    ["COM\u00b9X", "COM\u00b9X"],
+  ])("%j → %j", (input, expected) => {
+    expect(safeComponent(input)).toBe(expected);
+  });
+});
+
+describe("a ZIP's name stays within 255 bytes (S4)", () => {
+  const folder = (name: string) => [
+    { i: 0, path: `${name}/a.txt`, size: 1, kind: "file" as const, type: "" },
+  ];
+  test("a folder name of 255 bytes still gives a valid ZIP name", () => {
+    const top = safeComponent("x".repeat(400));
+    expect(utf8Length(top)).toBe(255);
+    const name = zipName(folder(top));
+    expect(utf8Length(name)).toBeLessThanOrEqual(255);
+    expect(name.endsWith(".zip")).toBe(true);
+  });
+  test("multi-byte names are cut on a character boundary", () => {
+    const name = zipName(folder(safeComponent("😀".repeat(100))));
+    expect(utf8Length(name)).toBeLessThanOrEqual(255);
+    expect(name.endsWith(".zip")).toBe(true);
+    expect(name).not.toContain("\ufffd");
+  });
+  test("short names are unchanged", () => {
+    expect(zipName(folder("Holiday"))).toBe("Holiday.zip");
+    expect(zipName([{ i: 0, path: "a.txt", size: 1, kind: "file", type: "" }])).toBe(
+      "HANDit files.zip",
+    );
+  });
+});
+
+describe("text from the other device is cleaned before it is shown (S4)", () => {
+  test("control, invisible and bidirectional characters are removed", () => {
+    expect(cleanPeerText("Mom\u202e\u0007\u200b", 40)).toBe("Mom");
+    expect(cleanPeerText("a\u2028b\u00adc\u{e0041}d", 40)).toBe("abcd");
+  });
+  test("white space is collapsed and trimmed", () => {
+    expect(cleanPeerText("  Ravi's \n\t  iPhone  ", 40)).toBe("Ravi's iPhone");
+  });
+  test("it is cut to the limit in whole characters", () => {
+    expect([...cleanPeerText("x".repeat(5000), 40)]).toHaveLength(40);
+    const emoji = cleanPeerText("😀".repeat(100), 40);
+    expect([...emoji]).toHaveLength(40);
+    expect(emoji).not.toContain("\ufffd");
+  });
+  test("stacked combining marks can't make a name unreadable", () => {
+    const zalgo = `Z${"\u0301\u0302\u0303\u0304\u0305\u0306".repeat(6)}`;
+    const out = cleanPeerText(zalgo, 40);
+    expect([...out.normalize("NFD")].filter((c) => /\p{M}/u.test(c)).length).toBeLessThanOrEqual(3); // one accent is folded into the letter itself
+    expect(out.normalize("NFD").startsWith("Z")).toBe(true);
+    expect(cleanPeerText("Ravi\u0301", 40)).toBe("Rav\u00ed"); // ordinary accents are kept
+  });
+  test("nothing left means an empty string, for the caller to replace", () => {
+    expect(cleanPeerText("\u200b\u202e \u0000", 40)).toBe("");
+  });
+});
+
+describe("hostile lists can't freeze the page (S7)", () => {
+  const many = (n: number, path: (i: number) => string): OfferItem[] =>
+    Array.from({ length: n }, (_, i) => ({ i, path: path(i), size: 1, kind: "file", type: "" }));
+
+  test("10,000 files with the same name are made safe in well under a second", () => {
+    const start = performance.now();
+    const out = makeSafe(many(10_000, () => "a.txt"));
+    expect(performance.now() - start).toBeLessThan(1500);
+    expect(new Set(out.map((x) => x.path.toLowerCase())).size).toBe(10_000);
+    expect(out[0]?.path).toBe("a.txt");
+    expect(out[1]?.path).toBe("a (1).txt");
+    expect(out[9999]?.path).toBe("a (9999).txt");
+  });
+
+  test("3,000 long names that collide are fast too", () => {
+    const start = performance.now();
+    const out = makeSafe(many(3000, () => `${"é".repeat(150)}.txt`));
+    expect(performance.now() - start).toBeLessThan(1500);
+    expect(new Set(out.map((x) => x.path.toLowerCase())).size).toBe(3000);
+    for (const x of out) expect(utf8Length(x.path)).toBeLessThanOrEqual(255);
+  });
+
+  test("a name that already looks like a renamed one doesn't clash", () => {
+    const out = makeSafe(many(3, (i) => ["a.txt", "a (1).txt", "a.txt"][i] as string));
+    expect(out.map((x) => x.path)).toEqual(["a.txt", "a (1).txt", "a (2).txt"]);
+  });
+});
+
+describe("names that a file system treats as the same are renamed (S4)", () => {
+  // Case folding on macOS and Windows goes beyond toLowerCase: the long s and the sharp s.
+  test.each([
+    ["\u017f.txt", "S.txt"],
+    ["\u00df.txt", "SS.txt"],
+    ["\u00df.txt", "ss.txt"],
+    ["\u0131.txt", "I.txt"],
+    ["K.txt", "\u212a.txt"], // the Kelvin sign
+  ])("%j and %j end up with different names", (a, b) => {
+    const [x, y] = safePaths(a, b);
+    expect(x?.toUpperCase().toLowerCase()).not.toBe(y?.toUpperCase().toLowerCase());
+  });
+
+  test("a lone surrogate can't reach a file system", () => {
+    const out = safeComponent("a\ud800b.txt");
+    expect(out).toBe("a\ufffdb.txt");
+    expect(/\p{Surrogate}/u.test(out)).toBe(false);
+    const paths = safePaths("\ud800.txt", "\udc00.txt");
+    expect(new Set(paths).size).toBe(2);
+  });
+});
+
+describe("risky types are found whatever the name looks like (S4)", () => {
+  test.each([
+    [".invoice.exe", "app"],
+    [".a.b.exe", "disguised"],
+    ["page.html", "app"],
+    ["picture.svg", "app"],
+    ["macro.docm", "app"],
+    ["sheet.xlsm", "app"],
+    ["connect.rdp", "app"],
+    ["disk.vhdx", "app"],
+    ["help.chm", "app"],
+    ["package.appx", "app"],
+    ["a.pdf.html", "disguised"],
+    [".exe", null],
+    [".bashrc", null],
+    ["notes.txt", null],
+  ])("%s → %s", (name, expected) => {
+    expect(riskOf(name)).toBe(expected);
+  });
 });

@@ -39,7 +39,7 @@ export function HowItWorks() {
           {pages.privacy.title}
         </Link>{" "}
         ·{" "}
-        <Link href="/limitations" className="font-semibold underline underline-offset-4">
+        <Link href="/help" className="font-semibold underline underline-offset-4">
           {pages.limitations.title}
         </Link>
       </p>

@@ -6,6 +6,8 @@ export const MAX_CONTROL_BYTES = 64 * 1024;
 export const MAX_ITEMS = 10_000;
 export const MAX_PATH_BYTES = 4096;
 export const MAX_DEPTH = 32;
+/** All paths and types of one offer together: far above any honest list, far below memory trouble. */
+export const MAX_OFFER_TEXT_BYTES = 8 * 1024 * 1024;
 
 export interface OfferItem {
   i: number;
@@ -50,6 +52,9 @@ function parseItem(v: unknown): OfferItem | null {
     return null;
   }
   if (kind !== "file" && kind !== "dir") return null;
+  // A media type is a short line of printable ASCII. Without a limit, a sender could fill the
+  // receiver's memory with the type of each of 10,000 items before anyone has accepted.
+  if (!/^[\x20-\x7e]{0,127}$/.test(type)) return null;
   return { i, path, size, kind, type };
 }
 
@@ -145,6 +150,7 @@ export function splitOffer(id: string, items: OfferItem[]): OfferPart[] {
 export class OfferAssembler {
   private items: OfferItem[] = [];
   private received = 0;
+  private textBytes = 0;
 
   constructor(readonly offer: Extract<Control, { t: "offer" }>) {
     if (offer.parts < 1 || offer.parts > MAX_ITEMS || offer.files > MAX_ITEMS) {
@@ -166,6 +172,8 @@ export class OfferAssembler {
       if (byteLength(item.path) > MAX_PATH_BYTES || item.path.split("/").length > MAX_DEPTH) {
         throw new Error("path too long or too deep");
       }
+      this.textBytes += byteLength(item.path) + item.type.length;
+      if (this.textBytes > MAX_OFFER_TEXT_BYTES) throw new Error("offer too large");
       this.items.push(item);
     }
     if (this.received < this.offer.parts) return null;

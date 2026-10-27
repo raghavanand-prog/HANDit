@@ -186,7 +186,7 @@ describe("finishing a sign-in", () => {
     const payload = JSON.parse(
       atob((token.split(".")[0] ?? "").replaceAll("-", "+").replaceAll("_", "/")),
     );
-    expect(Object.keys(payload).sort()).toEqual(["exp", "iat", "n", "p", "v"]);
+    expect(Object.keys(payload).sort()).toEqual(["exp", "iat", "n", "p", "t", "v"]);
     expect(token).not.toContain("asha@");
   });
 
@@ -337,11 +337,20 @@ describe("the session", () => {
     ).toBeNull();
   });
 
-  test("a session expires after 30 days", async () => {
+  test("a session expires after 7 days", async () => {
     const token = await sessionCookie();
-    vi.useFakeTimers({ now: Date.now() + 31 * 24 * 3600_000, toFake: ["Date"] });
+    vi.useFakeTimers({ now: Date.now() + 6 * 24 * 3600_000, toFake: ["Date"] });
+    expect((await me(token)).user).not.toBeNull();
+    vi.useFakeTimers({ now: Date.now() + 2 * 24 * 3600_000, toFake: ["Date"] });
     expect((await me(token)).user).toBeNull();
     vi.useRealTimers();
+  });
+
+  test("a pending sign-in cookie is not a session", async () => {
+    // Anyone can start a sign-in and receive a genuinely signed "pending" cookie. Sent back as a
+    // session, it must not count as being signed in.
+    const pending = await start("github");
+    expect((await me(pending.cookies["__Host-handit_oauth"] ?? "")).user).toBeNull();
   });
 
   test("one call tells the page who is signed in and which providers are on offer", async () => {
@@ -365,7 +374,82 @@ describe("the session", () => {
     expect(header).toMatch(/HttpOnly/);
     expect(header).toMatch(/Secure/);
     expect(header).toMatch(/SameSite=Lax/);
-    expect(header).toMatch(/Max-Age=2592000/);
+    expect(header).toMatch(/Max-Age=604800/);
+  });
+});
+
+describe("the fake provider setting is for the local test server only (S8)", () => {
+  const testEnv: AuthEnv = { ...env, OAUTH_BASE_URL: "http://localhost:8790" };
+  const startAt = async (origin: string) => {
+    const response = await handleAuth(
+      new Request(`${origin}/auth/github/start`, { redirect: "manual" }),
+      testEnv,
+    );
+    return response?.headers.get("location") ?? "";
+  };
+
+  test("on the real site it is ignored: the sign-in goes to GitHub itself", async () => {
+    expect(await startAt("https://handit.test")).toMatch(
+      /^https:\/\/github\.com\/login\/oauth\/authorize/,
+    );
+    expect(await startAt("https://handit-worker.workers.dev")).toMatch(/^https:\/\/github\.com\//);
+  });
+
+  test("on localhost it is used", async () => {
+    expect(await startAt("http://localhost:8788")).toMatch(
+      /^http:\/\/localhost:8790\/login\/oauth\/authorize/,
+    );
+    expect(await startAt("http://127.0.0.1:8788")).toMatch(/^http:\/\/localhost:8790\//);
+  });
+
+  test("a look-alike host name is not localhost", async () => {
+    expect(await startAt("https://localhost.evil.example")).toMatch(/^https:\/\/github\.com\//);
+  });
+});
+
+describe("calls to the provider", () => {
+  const callbackWith = async (respond: (url: string) => Response) => {
+    const calls: { url: string; signal?: AbortSignal | null }[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input instanceof Request ? input.url : input);
+      calls.push({ url, signal: init?.signal });
+      return respond(url);
+    });
+    const { location, cookies } = await start("github");
+    const response = await call(
+      `/auth/github/callback?code=c&state=${location.searchParams.get("state")}`,
+      { headers: { cookie: cookieHeader(cookies) } },
+    );
+    return { calls, response };
+  };
+
+  test("each call has a time limit, so a slow provider can't hold the Worker", async () => {
+    const { calls } = await callbackWith((url) =>
+      /access_token/.test(url)
+        ? new Response(JSON.stringify({ access_token: "t" }))
+        : new Response(JSON.stringify({ login: "ravi" })),
+    );
+    expect(calls).toHaveLength(2);
+    for (const c of calls) expect(c.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  test("an error status from the provider fails the sign-in, even with a body that looks fine", async () => {
+    const { response } = await callbackWith((url) =>
+      /access_token/.test(url)
+        ? new Response(JSON.stringify({ access_token: "t" }), { status: 500 })
+        : new Response(JSON.stringify({ login: "ravi" })),
+    );
+    expect(response.headers.get("location")).toBe("/signin?error=1");
+    expect(Object.keys(cookiesOf(response))).not.toContain("__Host-handit_session");
+  });
+
+  test("a failing profile request fails the sign-in too", async () => {
+    const { response } = await callbackWith((url) =>
+      /access_token/.test(url)
+        ? new Response(JSON.stringify({ access_token: "t" }))
+        : new Response(JSON.stringify({ login: "ravi" }), { status: 503 }),
+    );
+    expect(response.headers.get("location")).toBe("/signin?error=1");
   });
 });
 

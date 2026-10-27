@@ -7,6 +7,8 @@
 //    Send page through a temporary cache entry that the page deletes as soon as it has the files.
 const SHELL = "handit-shell-v2";
 const SHARE = "handit-share";
+// More files than this in one share is refused: nobody shares that many by hand.
+const MAX_SHARED_FILES = 1000;
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -26,6 +28,30 @@ const isShellPath = (path) =>
   path === "/" ||
   path.startsWith("/assets/") ||
   /^\/(icon-|apple-touch-icon|favicon|manifest)/.test(path);
+
+/**
+ * True for a request that came from the app itself or the phone's share sheet. A form on another
+ * website can post to /share-target too, and would otherwise fill the person's send list.
+ * Browsers that send fetch metadata say so in Sec-Fetch-Site; for the others, an Origin header
+ * that isn't ours gives it away.
+ */
+function fromOurSide(request) {
+  const site = request.headers.get("Sec-Fetch-Site");
+  if (site !== null) return site === "none" || site === "same-origin";
+  const origin = request.headers.get("Origin");
+  return origin === null || origin === self.location.origin;
+}
+
+/**
+ * Whether a response may be kept. The single-page fallback answers any unknown path with the
+ * app's HTML and status 200; kept under a script's address it would break the app offline.
+ */
+function worthKeeping(request, response) {
+  if (!response.ok || response.type === "opaque" || response.type === "opaqueredirect")
+    return false;
+  const type = response.headers.get("content-type") ?? "";
+  return request.destination === "document" || !type.includes("text/html");
+}
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
@@ -68,7 +94,7 @@ self.addEventListener("fetch", (event) => {
         const cached = await cache.match(request);
         if (cached) return cached;
         const response = await fetch(request);
-        if (response.ok) cache.put(request, response.clone());
+        if (worthKeeping(request, response)) cache.put(request, response.clone());
         return response;
       })(),
     );
@@ -76,14 +102,16 @@ self.addEventListener("fetch", (event) => {
 });
 
 async function receiveShare(request) {
+  if (!fromOurSide(request)) return new Response("Forbidden", { status: 403 });
   const form = await request.formData();
+  const shared = form.getAll("files").filter((entry) => typeof entry !== "string");
+  if (shared.length > MAX_SHARED_FILES) return new Response("Too many files", { status: 413 });
   const id = crypto.randomUUID().replaceAll("-", "");
   const cache = await caches.open(SHARE);
   let n = 0;
-  for (const entry of form.getAll("files")) {
-    if (typeof entry === "string") continue;
+  for (const entry of shared) {
     await cache.put(
-      new Request(`/__share/${id}/${n++}`),
+      new Request(new URL(`/__share/${id}/${n++}`, self.location.origin).href),
       new Response(entry, {
         headers: {
           "Content-Type": entry.type || "application/octet-stream",
@@ -93,5 +121,5 @@ async function receiveShare(request) {
       }),
     );
   }
-  return Response.redirect(`/send?shared=${id}`, 303);
+  return Response.redirect(new URL(`/send?shared=${id}`, self.location.origin).href, 303);
 }

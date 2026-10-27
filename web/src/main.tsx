@@ -1,11 +1,17 @@
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import { takeLinkFromAddressBar } from "./core/link";
+import { looksLikeLink, takeLinkFromAddressBar } from "./core/link";
 import { App } from "./ui/App";
 
 // A code's link carries its secret after "#". Read it once, straight away, and replace
 // the address with /j so the secret doesn't stay in the address bar or history.
-const joinLink = location.pathname === "/j" ? takeLinkFromAddressBar(location, history) : null;
+// Any spelling of the path counts (/j/, /J), and a link-sized fragment on any other path is
+// dropped from the address too: the secret never stays in the bar or the history.
+const isJoinPath = /^\/j\/?$/i.test(location.pathname);
+const joinLink = isJoinPath ? takeLinkFromAddressBar(location, history) : null;
+if (!isJoinPath && looksLikeLink(location.hash)) {
+  history.replaceState(null, "", location.pathname + location.search);
+}
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing #root element");

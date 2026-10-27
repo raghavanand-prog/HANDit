@@ -4,7 +4,9 @@
 // Each side's DTLS fingerprint is inside its sealed SDP, so nobody in between
 // can substitute their own.
 import { HanditError, toHanditError } from "./codes";
+import { cleanDeviceLabel } from "./device";
 import type { Mode } from "./link";
+import { cleanPeerText } from "./names";
 import type { IntroMessage, Role } from "./seal";
 import type { Signal } from "./signal";
 
@@ -39,6 +41,26 @@ export interface IntroduceOptions {
 
 const protocolError = () => new HanditError("UNKNOWN_ERROR", "protocol error");
 
+/**
+ * A description from the other device, checked before the browser sees it. HANDit's connection is
+ * one data channel secured by one DTLS certificate, and the sealed description is what says
+ * which certificate to trust. So: only a data section (no audio or video), and a SHA-256
+ * fingerprint that is present and not contradicted by a second, different one.
+ */
+export function checkSdp(sdp: string): void {
+  const lines = sdp.split(/\r?\n/);
+  const sections = lines.filter((l) => l.startsWith("m="));
+  if (sections.length === 0 || sections.some((l) => !l.startsWith("m=application "))) {
+    throw protocolError();
+  }
+  const prints = new Set<string>();
+  for (const line of lines) {
+    const found = line.match(/^a=fingerprint:sha-256 ([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){31})$/);
+    if (found) prints.add((found[1] ?? "").toUpperCase());
+  }
+  if (prints.size !== 1) throw protocolError();
+}
+
 /** Candidate kinds, in plain words, for the P2P_FAILED details. */
 const kindOf = (candidate: string) => {
   const type = candidate.match(/ typ (\w+)/)?.[1];
@@ -60,6 +82,7 @@ export function introduce({
     let timer: ReturnType<typeof setTimeout> | undefined;
     let settled = false;
     let remoteDescriptionSet = false;
+    let byeSeen = false;
     const early: RTCIceCandidateInit[] = [];
     const localKinds = new Set<string>();
     const remoteKinds = new Set<string>();
@@ -119,7 +142,8 @@ export function introduce({
         if (m.t !== "hello" && m.t !== "welcome") throw protocolError();
         if (m.v !== PROTOCOL_VERSION) throw new HanditError("LINK_UNSUPPORTED_VERSION");
         if (m.t === "welcome" && m.mode !== mode) throw protocolError();
-        peer = { name: m.name, ua: m.ua };
+        // Shown in the prompts: cut short and cleaned, so a hostile name can't fill the screen or hide in it.
+        peer = { name: cleanPeerText(m.name, 40), ua: cleanDeviceLabel(m.ua) };
 
         if (role === "owner") {
           onJoined?.(peer);
@@ -145,6 +169,7 @@ export function introduce({
         if (m.type !== (role === "owner" ? "answer" : "offer") || remoteDescriptionSet) {
           throw protocolError();
         }
+        checkSdp(m.sdp);
         await pc.setRemoteDescription({ type: m.type, sdp: m.sdp });
         remoteDescriptionSet = true;
         for (const candidate of early.splice(0)) await pc.addIceCandidate(candidate);
@@ -158,7 +183,9 @@ export function introduce({
         remoteKinds.add(kindOf(m.candidate));
         if (remoteDescriptionSet) await pc.addIceCandidate(m);
         else early.push(m);
-      } else if (m.t !== "bye") {
+      } else if (m.t === "bye") {
+        byeSeen = true;
+      } else {
         throw protocolError();
       }
     };
@@ -168,7 +195,19 @@ export function introduce({
     signal.onmessage = (m) => {
       queue = queue.then(() => (settled ? undefined : handle(m))).catch(fail);
     };
-    signal.onfail = fail;
+    // Both devices give up after the same time, one a moment before the other. The one that gives
+    // up leaves the Room, which closes the other's connection with "Peer left". Once the two have
+    // met, that is the connection having failed, not the server being unreachable.
+    signal.onfail = (error) => {
+      // After the messages that were already queued, so a "bye" just before the close counts.
+      queue = queue.then(() => {
+        const peerLeft = error.details.includes("1000: Peer left");
+        // The other device said bye once its channel was open: it leaving the Room now is the
+        // normal end of the introduction, and our own channel may still be about to open.
+        if (peerLeft && byeSeen) return;
+        fail(peer && peerLeft ? new HanditError("P2P_FAILED", details()) : error);
+      });
+    };
 
     if (role === "guest") {
       signal.ready

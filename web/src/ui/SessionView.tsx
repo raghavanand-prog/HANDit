@@ -16,6 +16,7 @@ import {
   zipOf,
 } from "../core/save";
 import type { Session, SessionState } from "../core/session";
+import { allIdentical } from "../core/transfer";
 import { messages, messageText, notices, strings } from "../strings";
 import { useApp } from "./app-context";
 import { CodeCard } from "./CodeCard";
@@ -127,7 +128,7 @@ function statusFor(
       return { tone: "accent", label: text.transferring };
     case "complete": {
       const t = state.transfer;
-      const allOk = t && Object.values(t.outcomes).filter((o) => o.ok).length === t.totalFiles;
+      const allOk = t && allIdentical(t);
       return allOk ? { tone: "good", label: text.done } : { tone: "warn", label: text.partial };
     }
     case "failed":
@@ -274,6 +275,7 @@ function Choose({ session }: { session: Session }) {
 }
 
 function Confirm({ state, session }: { state: SessionState; session: Session }) {
+  const settled = useSettled();
   return (
     <div className="space-y-5">
       <div className="rounded-3xl bg-surface p-6">
@@ -286,7 +288,9 @@ function Confirm({ state, session }: { state: SessionState; session: Session }) 
         <p className="mt-3 text-muted">{strings.peer.confirmHint}</p>
       </div>
       <div className="flex flex-wrap gap-3">
-        <Button onClick={() => session.allow(true)}>{strings.peer.allow}</Button>
+        <Button disabled={!settled} onClick={() => session.allow(true)}>
+          {strings.peer.allow}
+        </Button>
         <Button variant="secondary" onClick={() => session.allow(false)}>
           {strings.peer.dontAllow}
         </Button>
@@ -295,11 +299,37 @@ function Confirm({ state, session }: { state: SessionState; session: Session }) 
   );
 }
 
+// The type is the sender's claim; a file that is an app by its name is never counted as a photo.
+const notRisky = (x: OfferItem) => riskOf(x.path.split("/").at(-1) ?? "") === null;
 const isPhoto = (x: OfferItem) =>
-  x.type.startsWith("image/") ||
-  /\.(heic|heif|jpe?g|png|dng|cr3|nef|arw|avif|webp|gif|tiff?)$/i.test(x.path);
+  notRisky(x) &&
+  (x.type.startsWith("image/") ||
+    /\.(heic|heif|jpe?g|png|dng|cr3|nef|arw|avif|webp|gif|tiff?)$/i.test(x.path));
 const isVideo = (x: OfferItem) =>
-  x.type.startsWith("video/") || /\.(mov|mp4|m4v|hevc|avi|mkv|webm|3gp)$/i.test(x.path);
+  notRisky(x) &&
+  (x.type.startsWith("video/") || /\.(mov|mp4|m4v|hevc|avi|mkv|webm|3gp)$/i.test(x.path));
+
+/** A long path is cut in the middle, so the end, with the extension, always shows. */
+function PathText({ path }: { path: string }) {
+  const chars = [...path];
+  if (chars.length <= 28) return <bdi>{path}</bdi>;
+  return (
+    <span className="flex min-w-0">
+      <bdi className="truncate">{chars.slice(0, -14).join("")}</bdi>
+      <bdi className="shrink-0 whitespace-nowrap">{chars.slice(-14).join("")}</bdi>
+    </span>
+  );
+}
+
+/** True a moment after it first shows: a button that has just appeared can't be hit by a click meant for the screen before. */
+function useSettled(ms = 400) {
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(true), ms);
+    return () => clearTimeout(timer);
+  }, [ms]);
+  return settled;
+}
 
 /** "24 photos · 3 videos · 2 files". */
 function mediaSummary(items: OfferItem[]): string[] {
@@ -315,6 +345,7 @@ function mediaSummary(items: OfferItem[]): string[] {
 }
 
 function Review({ state, session }: { state: SessionState; session: Session }) {
+  const settled = useSettled();
   const transfer = state.transfer;
   if (!transfer) return null;
   const items = transfer.items;
@@ -357,8 +388,8 @@ function Review({ state, session }: { state: SessionState; session: Session }) {
           const risk = riskOf(item.path.split("/").at(-1) ?? "");
           return (
             <li key={item.i} className="flex items-center gap-3 px-4 py-2 text-sm">
-              <span className="min-w-0 flex-1 truncate">
-                <bdi>{item.kind === "dir" ? `${item.path}/` : item.path}</bdi>
+              <span className="min-w-0 flex-1">
+                <PathText path={item.kind === "dir" ? `${item.path}/` : item.path} />
               </span>
               {risk && (
                 <span className="shrink-0 rounded-md bg-danger-soft px-1.5 text-xs font-semibold text-danger">
@@ -400,7 +431,7 @@ function Review({ state, session }: { state: SessionState; session: Session }) {
       <p className="font-medium text-verified">{strings.review.quality}</p>
       <PathLabel />
       <div className="flex flex-wrap gap-3">
-        <Button size="lg" disabled={!storage?.ok} onClick={() => session.accept()}>
+        <Button size="lg" disabled={!storage?.ok || !settled} onClick={() => session.accept()}>
           {strings.review.accept}
         </Button>
         <Button size="lg" variant="secondary" onClick={() => session.decline()}>
@@ -511,7 +542,7 @@ function Sent({ state }: { state: SessionState }) {
   const t = state.transfer;
   if (!t) return null;
   const ok = Object.values(t.outcomes).filter((o) => o.ok).length;
-  const allOk = ok === t.totalFiles;
+  const allOk = allIdentical(t);
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -533,7 +564,7 @@ function Received({ state }: { state: SessionState }) {
   const t = state.transfer;
   if (!t) return null;
   const ok = Object.values(t.outcomes).filter((o) => o.ok).length;
-  const allOk = ok === t.totalFiles;
+  const allOk = allIdentical(t);
   const heic = device.os === "Windows" && t.items.some((x) => /\.(heic|heif)$/i.test(x.path));
   const media = mediaSummary(t.items);
   return (
@@ -672,7 +703,9 @@ function FileResults({
                 {outcome?.ok ? "✓" : "✕"}
               </span>
               <span className="min-w-0 flex-1">
-                <bdi className="block truncate">{item.path}</bdi>
+                <span className="block">
+                  <PathText path={item.path} />
+                </span>
                 <span className="text-muted">
                   {formatKind(name, item.type)} · {formatBytes(item.size)} ·{" "}
                   {outcome?.ok ? strings.complete.fileOk : (failure ?? strings.complete.fileFailed)}

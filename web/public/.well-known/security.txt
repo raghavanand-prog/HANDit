@@ -1,0 +1,6 @@
+# How to report a security problem in HANDit (RFC 9116).
+Contact: https://github.com/raghavanand-prog/HANDit/security/advisories/new
+Expires: 2027-10-26T00:00:00.000Z
+Policy: https://github.com/raghavanand-prog/HANDit/blob/main/SECURITY.md
+Canonical: https://handit.handit-worker.workers.dev/.well-known/security.txt
+Preferred-Languages: en

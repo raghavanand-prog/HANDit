@@ -2,7 +2,7 @@
 // download, several as a ZIP (store method), into a folder the user picks, or through
 // the phone's share sheet. Also the storage check before Accept and the clean-up.
 import { receivedFile } from "./files";
-import { withNumber } from "./names";
+import { fitName, withNumber } from "./names";
 import type { OfferItem } from "./protocol";
 import { buildZip, type ZipEntry } from "./zip";
 
@@ -94,7 +94,7 @@ export function zipName(items: OfferItem[]): string {
   const tops = new Set(items.map((x) => x.path.split("/")[0]));
   const [top] = tops;
   const oneFolder = tops.size === 1 && items.some((x) => x.path.includes("/"));
-  return oneFolder && top ? `${top}.zip` : "HANDit files.zip";
+  return oneFolder && top ? fitName(top, ".zip") : "HANDit files.zip";
 }
 
 // showDirectoryPicker is only in some browsers ("Limited availability"), so it isn't in the DOM types.

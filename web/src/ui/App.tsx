@@ -8,7 +8,7 @@ import {
   signOut as signOutRequest,
 } from "../core/auth";
 import { defaultDeviceName, thisDevice, uaLabel } from "../core/device";
-import type { LinkResult } from "../core/link";
+import { type LinkResult, looksLikeLink, takeLinkFromAddressBar } from "../core/link";
 import { cleanUpLeftovers } from "../core/save";
 import { loadSettings, type Settings, saveSettings } from "../core/settings";
 import { clearSharedFiles } from "../core/share";
@@ -79,6 +79,21 @@ export function App({ joinLink: openedWith }: { joinLink: LinkResult | null }) {
   const path = usePath();
   // A code opened from a link (read at start-up) or scanned with the in-page camera.
   const [joinLink, setJoinLink] = useState<LinkResult | null>(openedWith);
+  // A link opened in a tab that is already showing the app arrives as a change of the fragment,
+  // not a page load: take it the same way, so its secret doesn't stay in the address or history.
+  useEffect(() => {
+    const onHashChange = () => {
+      if (!looksLikeLink(location.hash)) return;
+      setJoinLink(takeLinkFromAddressBar(location, history));
+      navigate("/j", { replace: true });
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+  // The secret isn't kept once the person leaves the join screen: Back doesn't join again.
+  useEffect(() => {
+    if (path !== "/j") setJoinLink(null);
+  }, [path]);
   const device = useMemo(thisDevice, []);
   const [settings, setSettingsState] = useState<Settings>(() =>
     loadSettings(defaultDeviceName(device)),
