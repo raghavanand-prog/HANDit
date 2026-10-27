@@ -1,14 +1,28 @@
 # HANDit
 
-**Send photos, videos and files from any phone or computer to any other — just open the link and scan the code. Original quality, never compressed, never uploaded.**
+**Send photos, videos and files straight from one phone or computer to another, in the browser, at original quality.**
 
-**Live: [handit.handit-worker.workers.dev](https://handit.handit-worker.workers.dev)** — nothing to install, and no account needed.
+Why it exists: moving files between an iPhone, an Android phone and a laptop usually means a cloud upload, an extra app or compressed photos. HANDit sends them directly between the two devices, with nothing to install and no account.
 
-> **Public test — not independently security-audited.** This is the one official address; check it before you scan or trust a code.
+**Live: [handit.handit-worker.workers.dev](https://handit.handit-worker.workers.dev)**
+
+## Try it
+
+1. On the device that has the files, open the link above, tap **Send files** and pick your files.
+2. Scan the code it shows with the other device's camera.
+3. The sender taps **Allow**, and the receiver checks the list and taps **Accept**.
+
+> **Public test, not independently security-audited.** This is the one official address; check it before you scan or trust a code. Some strict networks (office or campus firewalls, some mobile carriers, VPNs) block direct connections; the same Wi-Fi or a phone's hotspot usually works.
 
 |                                                                                                    |                                                                                                                |                                                                                                            |                                                                                            |
 | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | <img src="docs/screenshots/home.png" alt="The home page on a phone: Send and Receive" width="200"> | <img src="docs/screenshots/code.png" alt="A one-time QR code on a marigold tag, with a countdown" width="320"> | <img src="docs/screenshots/review.png" alt="The recipient reviews the files before accepting" width="200"> | <img src="docs/screenshots/complete.png" alt="Original quality · Identical ✓" width="200"> |
+
+---
+
+## Technical details
+
+Everything below is the full write-up for engineers and reviewers.
 
 ## What it does
 
